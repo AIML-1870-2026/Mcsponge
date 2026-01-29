@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Web</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #0a0a14;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 280px;
+            background: rgba(10, 10, 20, 0.9);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(135, 206, 250, 0.2);
+            padding: 20px;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .panel.collapsed {
+            transform: translateX(-260px);
+        }
+
+        .panel h1 {
+            color: #87CEFA;
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(135, 206, 250, 0.5);
+        }
+
+        .toggle-btn {
+            position: absolute;
+            right: -40px;
+            top: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(10, 10, 20, 0.9);
+            border: 1px solid rgba(135, 206, 250, 0.3);
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+            color: #87CEFA;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: background 0.2s;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(135, 206, 250, 0.1);
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group label {
+            display: block;
+            color: #b0c4de;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group .value {
+            float: right;
+            color: #87CEFA;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(135, 206, 250, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #87CEFA;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(135, 206, 250, 0.5);
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #87CEFA;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(135, 206, 250, 0.5);
+        }
+
+        .stats-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(135, 206, 250, 0.2);
+        }
+
+        .stats-section h2 {
+            color: #87CEFA;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+        }
+
+        .stat-label {
+            color: #b0c4de;
+        }
+
+        .stat-value {
+            color: #87CEFA;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel" id="panel">
+        <button class="toggle-btn" id="toggleBtn">◀</button>
+        <h1>Stellar Web</h1>
+
+        <div class="control-group">
+            <label>Node Speed <span class="value" id="speedValue">2</span></label>
+            <input type="range" id="speed" min="0.1" max="5" step="0.1" value="2">
+        </div>
+
+        <div class="control-group">
+            <label>Node Count <span class="value" id="countValue">80</span></label>
+            <input type="range" id="count" min="10" max="200" step="5" value="80">
+        </div>
+
+        <div class="control-group">
+            <label>Node Size <span class="value" id="sizeValue">4</span></label>
+            <input type="range" id="size" min="1" max="10" step="0.5" value="4">
+        </div>
+
+        <div class="control-group">
+            <label>Connectivity Radius <span class="value" id="radiusValue">150</span></label>
+            <input type="range" id="radius" min="50" max="300" step="10" value="150">
+        </div>
+
+        <div class="control-group">
+            <label>Edge Thickness <span class="value" id="thicknessValue">1</span></label>
+            <input type="range" id="thickness" min="0.5" max="4" step="0.5" value="1">
+        </div>
+
+        <div class="stats-section">
+            <h2>Network Statistics</h2>
+            <div class="stat-row">
+                <span class="stat-label">Total Edges</span>
+                <span class="stat-value" id="statEdges">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Avg Connections</span>
+                <span class="stat-value" id="statAvgConn">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Network Density</span>
+                <span class="stat-value" id="statDensity">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const panel = document.getElementById('panel');
+        const toggleBtn = document.getElementById('toggleBtn');
+
+        // Controls
+        const controls = {
+            speed: document.getElementById('speed'),
+            count: document.getElementById('count'),
+            size: document.getElementById('size'),
+            radius: document.getElementById('radius'),
+            thickness: document.getElementById('thickness')
+        };
+
+        const values = {
+            speed: document.getElementById('speedValue'),
+            count: document.getElementById('countValue'),
+            size: document.getElementById('sizeValue'),
+            radius: document.getElementById('radiusValue'),
+            thickness: document.getElementById('thicknessValue')
+        };
+
+        // Settings
+        let settings = {
+            speed: 2,
+            count: 80,
+            size: 4,
+            radius: 150,
+            thickness: 1
+        };
+
+        let nodes = [];
+
+        // Stats elements
+        const statEdges = document.getElementById('statEdges');
+        const statAvgConn = document.getElementById('statAvgConn');
+        const statDensity = document.getElementById('statDensity');
+
+        // Node class
+        class Node {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.sizeMultiplier = 0.3 + Math.random() * 0.7; // 0.3 to 1.0
+            }
+
+            update() {
+                const speedMultiplier = settings.speed;
+                this.x += this.vx * speedMultiplier;
+                this.y += this.vy * speedMultiplier;
+
+                // Bounce off walls
+                if (this.x < 0 || this.x > canvas.width) {
+                    this.vx *= -1;
+                    this.x = Math.max(0, Math.min(canvas.width, this.x));
+                }
+                if (this.y < 0 || this.y > canvas.height) {
+                    this.vy *= -1;
+                    this.y = Math.max(0, Math.min(canvas.height, this.y));
+                }
+            }
+
+            draw() {
+                const nodeSize = settings.size * this.sizeMultiplier;
+                const opacity = 0.3 + (this.sizeMultiplier * 0.7); // 0.3 to 1.0
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, nodeSize, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(135, 206, 250, ${opacity})`;
+                ctx.shadowBlur = 15 * this.sizeMultiplier;
+                ctx.shadowColor = `rgba(135, 206, 250, ${opacity})`;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // Initialize nodes
+        function initNodes() {
+            nodes = [];
+            for (let i = 0; i < settings.count; i++) {
+                nodes.push(new Node());
+            }
+        }
+
+        // Draw edges between nearby nodes
+        function drawEdges() {
+            let edgeCount = 0;
+
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < settings.radius) {
+                        edgeCount++;
+                        const opacity = 1 - (distance / settings.radius);
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.strokeStyle = `rgba(135, 206, 250, ${opacity * 0.6})`;
+                        ctx.lineWidth = settings.thickness;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Update statistics
+            const n = nodes.length;
+            const maxEdges = (n * (n - 1)) / 2;
+            const avgConnections = n > 0 ? (edgeCount * 2) / n : 0;
+            const density = maxEdges > 0 ? (edgeCount / maxEdges) * 100 : 0;
+
+            statEdges.textContent = edgeCount;
+            statAvgConn.textContent = avgConnections.toFixed(1);
+            statDensity.textContent = density.toFixed(1) + '%';
+        }
+
+        // Animation loop
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 10, 20, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawEdges();
+
+            nodes.forEach(node => {
+                node.update();
+                node.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // Resize canvas
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // Update node count
+        function updateNodeCount() {
+            const diff = settings.count - nodes.length;
+            if (diff > 0) {
+                for (let i = 0; i < diff; i++) {
+                    nodes.push(new Node());
+                }
+            } else if (diff < 0) {
+                nodes.splice(0, Math.abs(diff));
+            }
+        }
+
+        // Event listeners
+        window.addEventListener('resize', resize);
+
+        toggleBtn.addEventListener('click', () => {
+            panel.classList.toggle('collapsed');
+            toggleBtn.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+        });
+
+        // Control listeners
+        Object.keys(controls).forEach(key => {
+            controls[key].addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                settings[key] = val;
+                values[key].textContent = val;
+
+                if (key === 'count') {
+                    updateNodeCount();
+                }
+            });
+        });
+
+        // Initialize
+        resize();
+        initNodes();
+        animate();
+    </script>
+</body>
+</html>
