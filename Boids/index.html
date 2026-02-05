@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boids Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a1a;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        canvas {
+            background: #0f0f23;
+            border: 1px solid #2a2a4a;
+            cursor: crosshair;
+        }
+        #stats {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.6;
+            border: 1px solid #333;
+        }
+        #stats span {
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+        #top-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        #top-controls button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        #pauseBtn {
+            background: #4caf50;
+            color: white;
+        }
+        #pauseBtn:hover {
+            background: #45a049;
+        }
+        #pauseBtn.paused {
+            background: #ff9800;
+        }
+        #resetBtn {
+            background: #f44336;
+            color: white;
+        }
+        #resetBtn:hover {
+            background: #da190b;
+        }
+        #clearObstaclesBtn {
+            background: #607d8b;
+            color: white;
+        }
+        #clearObstaclesBtn:hover {
+            background: #78909c;
+        }
+        #obstacle-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #aaa;
+            border: 1px solid #333;
+        }
+        #control-panel {
+            background: #1a1a2e;
+            padding: 20px;
+            border-top: 2px solid #2a2a4a;
+        }
+        .controls-row {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 120px;
+        }
+        .slider-group label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .slider-group input[type="range"] {
+            width: 100px;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #333;
+            border-radius: 3px;
+            outline: none;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #4fc3f7;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb:hover {
+            background: #81d4fa;
+        }
+        .slider-value {
+            font-size: 14px;
+            color: #4fc3f7;
+            margin-top: 6px;
+            font-weight: bold;
+        }
+        .dropdown-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .dropdown-group label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .dropdown-group select {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: none;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            outline: none;
+            min-width: 100px;
+        }
+        .dropdown-group select:hover {
+            background: #444;
+        }
+        .presets-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .presets-group label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .preset-btn {
+            padding: 8px 14px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        #schoolingBtn {
+            background: #3f51b5;
+            color: white;
+        }
+        #schoolingBtn:hover {
+            background: #5c6bc0;
+        }
+        #chaoticBtn {
+            background: #9c27b0;
+            color: white;
+        }
+        #chaoticBtn:hover {
+            background: #ab47bc;
+        }
+        #clusterBtn {
+            background: #00897b;
+            color: white;
+        }
+        #clusterBtn:hover {
+            background: #26a69a;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+        <div id="stats">
+            FPS: <span id="fps">0</span><br>
+            Boids: <span id="boidCount">0</span><br>
+            Avg Speed: <span id="avgSpeed">0</span><br>
+            Avg Neighbors: <span id="avgNeighbors">0</span><br>
+            Obstacles: <span id="obstacleCount">0</span>
+        </div>
+        <div id="top-controls">
+            <button id="pauseBtn">Pause</button>
+            <button id="resetBtn">Reset</button>
+            <button id="clearObstaclesBtn">Clear Obstacles</button>
+        </div>
+        <div id="obstacle-hint">Click on canvas to place obstacles • Shift+Click to remove</div>
+    </div>
+    <div id="control-panel">
+        <div class="controls-row">
+            <div class="slider-group">
+                <label>Separation</label>
+                <input type="range" id="separation" min="0" max="5" step="0.1" value="1.5">
+                <div class="slider-value" id="separationVal">1.5</div>
+            </div>
+            <div class="slider-group">
+                <label>Alignment</label>
+                <input type="range" id="alignment" min="0" max="5" step="0.1" value="1">
+                <div class="slider-value" id="alignmentVal">1.0</div>
+            </div>
+            <div class="slider-group">
+                <label>Cohesion</label>
+                <input type="range" id="cohesion" min="0" max="5" step="0.1" value="1">
+                <div class="slider-value" id="cohesionVal">1.0</div>
+            </div>
+            <div class="slider-group">
+                <label>Neighbor Radius</label>
+                <input type="range" id="radius" min="20" max="200" step="5" value="75">
+                <div class="slider-value" id="radiusVal">75</div>
+            </div>
+            <div class="slider-group">
+                <label>Max Speed</label>
+                <input type="range" id="maxSpeed" min="1" max="10" step="0.5" value="4">
+                <div class="slider-value" id="maxSpeedVal">4.0</div>
+            </div>
+            <div class="dropdown-group">
+                <label>Trail Theme</label>
+                <select id="trailTheme">
+                    <option value="default">Default</option>
+                    <option value="neon">Neon</option>
+                    <option value="nature">Nature</option>
+                </select>
+            </div>
+            <div class="dropdown-group">
+                <label>Mouse Effect</label>
+                <select id="mouseEffect">
+                    <option value="off">Off</option>
+                    <option value="attract">Attract</option>
+                    <option value="repel">Repel</option>
+                </select>
+            </div>
+            <div class="presets-group">
+                <label>Presets</label>
+                <div class="preset-buttons">
+                    <button class="preset-btn" id="schoolingBtn">Schooling</button>
+                    <button class="preset-btn" id="chaoticBtn">Chaotic</button>
+                    <button class="preset-btn" id="clusterBtn">Cluster</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Responsive canvas sizing
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            canvas.width = Math.min(container.clientWidth - 40, 1200);
+            canvas.height = Math.min(container.clientHeight - 40, 700);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Simulation parameters
+        let params = {
+            separation: 1.5,
+            alignment: 1.0,
+            cohesion: 1.0,
+            neighborRadius: 75,
+            maxSpeed: 4,
+            maxForce: 0.2,
+            trailTheme: 'default',
+            mouseEffect: 'off',
+            mouseRadius: 150,
+            mouseStrength: 0.5
+        };
+
+        const BOID_COUNT = 150;
+        const OBSTACLE_RADIUS = 30;
+        let boids = [];
+        let obstacles = [];
+        let paused = false;
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+        let mousePos = { x: -1000, y: -1000 };
+
+        // Track mouse position
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            mousePos = { x: -1000, y: -1000 };
+        });
+
+        // Handle obstacle placement
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (e.shiftKey) {
+                // Remove obstacle
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const dx = obstacles[i].x - x;
+                    const dy = obstacles[i].y - y;
+                    if (Math.sqrt(dx * dx + dy * dy) < OBSTACLE_RADIUS) {
+                        obstacles.splice(i, 1);
+                        break;
+                    }
+                }
+            } else {
+                // Add obstacle
+                obstacles.push({ x, y, radius: OBSTACLE_RADIUS });
+            }
+            updateObstacleCount();
+        });
+
+        function updateObstacleCount() {
+            document.getElementById('obstacleCount').textContent = obstacles.length;
+        }
+
+        // Color themes
+        const colorThemes = {
+            default: (speed, maxSpeed) => {
+                const hue = 180 + (speed / maxSpeed) * 60;
+                return `hsl(${hue}, 80%, 60%)`;
+            },
+            neon: (speed, maxSpeed, index) => {
+                const colors = [
+                    '#ff00ff', '#00ffff', '#ff0080', '#80ff00',
+                    '#ff8000', '#00ff80', '#8000ff', '#ffff00'
+                ];
+                const baseColor = colors[index % colors.length];
+                return baseColor;
+            },
+            nature: (speed, maxSpeed) => {
+                const ratio = speed / maxSpeed;
+                if (ratio < 0.33) {
+                    // Forest green to moss
+                    const hue = 100 + ratio * 40;
+                    return `hsl(${hue}, 50%, 40%)`;
+                } else if (ratio < 0.66) {
+                    // Earth tones
+                    const hue = 30 + (ratio - 0.33) * 30;
+                    return `hsl(${hue}, 45%, 45%)`;
+                } else {
+                    // Sky blue
+                    const hue = 190 + (ratio - 0.66) * 30;
+                    return `hsl(${hue}, 55%, 50%)`;
+                }
+            }
+        };
+
+        // Boid class
+        class Boid {
+            constructor(x, y, index) {
+                this.position = { x: x, y: y };
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 4,
+                    y: (Math.random() - 0.5) * 4
+                };
+                this.acceleration = { x: 0, y: 0 };
+                this.neighborCount = 0;
+                this.index = index;
+            }
+
+            edges() {
+                if (this.position.x > canvas.width) this.position.x = 0;
+                if (this.position.x < 0) this.position.x = canvas.width;
+                if (this.position.y > canvas.height) this.position.y = 0;
+                if (this.position.y < 0) this.position.y = canvas.height;
+            }
+
+            align(boids) {
+                let steering = { x: 0, y: 0 };
+                let total = 0;
+                for (let other of boids) {
+                    let d = this.distance(other.position);
+                    if (other !== this && d < params.neighborRadius) {
+                        steering.x += other.velocity.x;
+                        steering.y += other.velocity.y;
+                        total++;
+                    }
+                }
+                if (total > 0) {
+                    steering.x /= total;
+                    steering.y /= total;
+                    steering = this.setMagnitude(steering, params.maxSpeed);
+                    steering.x -= this.velocity.x;
+                    steering.y -= this.velocity.y;
+                    steering = this.limit(steering, params.maxForce);
+                }
+                return steering;
+            }
+
+            cohesion(boids) {
+                let steering = { x: 0, y: 0 };
+                let total = 0;
+                for (let other of boids) {
+                    let d = this.distance(other.position);
+                    if (other !== this && d < params.neighborRadius) {
+                        steering.x += other.position.x;
+                        steering.y += other.position.y;
+                        total++;
+                    }
+                }
+                if (total > 0) {
+                    steering.x /= total;
+                    steering.y /= total;
+                    steering.x -= this.position.x;
+                    steering.y -= this.position.y;
+                    steering = this.setMagnitude(steering, params.maxSpeed);
+                    steering.x -= this.velocity.x;
+                    steering.y -= this.velocity.y;
+                    steering = this.limit(steering, params.maxForce);
+                }
+                return steering;
+            }
+
+            separation(boids) {
+                let steering = { x: 0, y: 0 };
+                let total = 0;
+                for (let other of boids) {
+                    let d = this.distance(other.position);
+                    if (other !== this && d < params.neighborRadius * 0.5) {
+                        let diff = {
+                            x: this.position.x - other.position.x,
+                            y: this.position.y - other.position.y
+                        };
+                        if (d > 0) {
+                            diff.x /= d * d;
+                            diff.y /= d * d;
+                        }
+                        steering.x += diff.x;
+                        steering.y += diff.y;
+                        total++;
+                    }
+                }
+                if (total > 0) {
+                    steering.x /= total;
+                    steering.y /= total;
+                    steering = this.setMagnitude(steering, params.maxSpeed);
+                    steering.x -= this.velocity.x;
+                    steering.y -= this.velocity.y;
+                    steering = this.limit(steering, params.maxForce);
+                }
+                return steering;
+            }
+
+            avoidObstacles() {
+                let steering = { x: 0, y: 0 };
+                const avoidRadius = 60;
+
+                for (let obs of obstacles) {
+                    let d = this.distance(obs);
+                    if (d < obs.radius + avoidRadius) {
+                        let diff = {
+                            x: this.position.x - obs.x,
+                            y: this.position.y - obs.y
+                        };
+                        // Stronger avoidance when closer
+                        const strength = 1 - (d / (obs.radius + avoidRadius));
+                        if (d > 0) {
+                            diff.x /= d;
+                            diff.y /= d;
+                        }
+                        steering.x += diff.x * strength * 3;
+                        steering.y += diff.y * strength * 3;
+                    }
+                }
+
+                if (this.magnitude(steering) > 0) {
+                    steering = this.setMagnitude(steering, params.maxSpeed);
+                    steering.x -= this.velocity.x;
+                    steering.y -= this.velocity.y;
+                    steering = this.limit(steering, params.maxForce * 2);
+                }
+                return steering;
+            }
+
+            mouseInfluence() {
+                if (params.mouseEffect === 'off') return { x: 0, y: 0 };
+
+                let steering = { x: 0, y: 0 };
+                const d = this.distance(mousePos);
+
+                if (d < params.mouseRadius && d > 0) {
+                    let diff = {
+                        x: mousePos.x - this.position.x,
+                        y: mousePos.y - this.position.y
+                    };
+
+                    // Normalize
+                    diff.x /= d;
+                    diff.y /= d;
+
+                    // Strength falls off with distance
+                    const strength = (1 - d / params.mouseRadius) * params.mouseStrength;
+
+                    if (params.mouseEffect === 'attract') {
+                        steering.x = diff.x * strength;
+                        steering.y = diff.y * strength;
+                    } else if (params.mouseEffect === 'repel') {
+                        steering.x = -diff.x * strength * 2;
+                        steering.y = -diff.y * strength * 2;
+                    }
+                }
+
+                return steering;
+            }
+
+            flock(boids) {
+                this.neighborCount = 0;
+                for (let other of boids) {
+                    if (other !== this && this.distance(other.position) < params.neighborRadius) {
+                        this.neighborCount++;
+                    }
+                }
+
+                let alignment = this.align(boids);
+                let cohesion = this.cohesion(boids);
+                let separation = this.separation(boids);
+                let obstacleAvoid = this.avoidObstacles();
+                let mouse = this.mouseInfluence();
+
+                alignment.x *= params.alignment;
+                alignment.y *= params.alignment;
+                cohesion.x *= params.cohesion;
+                cohesion.y *= params.cohesion;
+                separation.x *= params.separation;
+                separation.y *= params.separation;
+
+                this.acceleration.x += alignment.x + cohesion.x + separation.x + obstacleAvoid.x + mouse.x;
+                this.acceleration.y += alignment.y + cohesion.y + separation.y + obstacleAvoid.y + mouse.y;
+            }
+
+            update() {
+                this.velocity.x += this.acceleration.x;
+                this.velocity.y += this.acceleration.y;
+                this.velocity = this.limit(this.velocity, params.maxSpeed);
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+                this.acceleration = { x: 0, y: 0 };
+            }
+
+            distance(point) {
+                return Math.sqrt(
+                    Math.pow(this.position.x - point.x, 2) +
+                    Math.pow(this.position.y - point.y, 2)
+                );
+            }
+
+            magnitude(v) {
+                return Math.sqrt(v.x * v.x + v.y * v.y);
+            }
+
+            setMagnitude(v, mag) {
+                let m = this.magnitude(v);
+                if (m > 0) {
+                    return { x: (v.x / m) * mag, y: (v.y / m) * mag };
+                }
+                return { x: 0, y: 0 };
+            }
+
+            limit(v, max) {
+                let m = this.magnitude(v);
+                if (m > max) {
+                    return { x: (v.x / m) * max, y: (v.y / m) * max };
+                }
+                return v;
+            }
+
+            draw() {
+                const angle = Math.atan2(this.velocity.y, this.velocity.x);
+                const size = 8;
+
+                ctx.save();
+                ctx.translate(this.position.x, this.position.y);
+                ctx.rotate(angle);
+
+                // Draw boid as triangle
+                ctx.beginPath();
+                ctx.moveTo(size, 0);
+                ctx.lineTo(-size * 0.6, size * 0.5);
+                ctx.lineTo(-size * 0.6, -size * 0.5);
+                ctx.closePath();
+
+                // Color based on theme
+                const speed = this.magnitude(this.velocity);
+                const color = colorThemes[params.trailTheme](speed, params.maxSpeed, this.index);
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Add glow for neon theme
+                if (params.trailTheme === 'neon') {
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 10;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // Draw obstacles
+        function drawObstacles() {
+            for (let obs of obstacles) {
+                // Outer glow
+                const gradient = ctx.createRadialGradient(
+                    obs.x, obs.y, obs.radius * 0.5,
+                    obs.x, obs.y, obs.radius * 1.2
+                );
+                gradient.addColorStop(0, 'rgba(100, 100, 120, 0.8)');
+                gradient.addColorStop(0.7, 'rgba(60, 60, 80, 0.6)');
+                gradient.addColorStop(1, 'rgba(40, 40, 60, 0)');
+
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y, obs.radius * 1.2, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Main obstacle
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#3a3a5a';
+                ctx.fill();
+                ctx.strokeStyle = '#5a5a8a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        // Draw mouse influence area
+        function drawMouseInfluence() {
+            if (params.mouseEffect === 'off') return;
+            if (mousePos.x < 0 || mousePos.y < 0) return;
+
+            ctx.beginPath();
+            ctx.arc(mousePos.x, mousePos.y, params.mouseRadius, 0, Math.PI * 2);
+
+            if (params.mouseEffect === 'attract') {
+                ctx.strokeStyle = 'rgba(100, 255, 100, 0.3)';
+                ctx.fillStyle = 'rgba(100, 255, 100, 0.05)';
+            } else {
+                ctx.strokeStyle = 'rgba(255, 100, 100, 0.3)';
+                ctx.fillStyle = 'rgba(255, 100, 100, 0.05)';
+            }
+
+            ctx.lineWidth = 2;
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // Initialize boids
+        function initBoids() {
+            boids = [];
+            for (let i = 0; i < BOID_COUNT; i++) {
+                boids.push(new Boid(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    i
+                ));
+            }
+        }
+
+        // Update stats
+        function updateStats() {
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = now;
+            }
+
+            let totalSpeed = 0;
+            let totalNeighbors = 0;
+            for (let boid of boids) {
+                totalSpeed += boid.magnitude(boid.velocity);
+                totalNeighbors += boid.neighborCount;
+            }
+
+            document.getElementById('fps').textContent = fps;
+            document.getElementById('boidCount').textContent = boids.length;
+            document.getElementById('avgSpeed').textContent = (totalSpeed / boids.length).toFixed(1);
+            document.getElementById('avgNeighbors').textContent = (totalNeighbors / boids.length).toFixed(1);
+        }
+
+        // Animation loop
+        function animate() {
+            if (!paused) {
+                // Different trail effect based on theme
+                if (params.trailTheme === 'neon') {
+                    ctx.fillStyle = 'rgba(10, 5, 20, 0.15)';
+                } else if (params.trailTheme === 'nature') {
+                    ctx.fillStyle = 'rgba(15, 20, 15, 0.2)';
+                } else {
+                    ctx.fillStyle = 'rgba(15, 15, 35, 0.2)';
+                }
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                drawObstacles();
+                drawMouseInfluence();
+
+                for (let boid of boids) {
+                    boid.flock(boids);
+                    boid.update();
+                    boid.edges();
+                    boid.draw();
+                }
+
+                updateStats();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // Slider controls
+        const sliders = ['separation', 'alignment', 'cohesion', 'radius', 'maxSpeed'];
+        sliders.forEach(name => {
+            const slider = document.getElementById(name);
+            const valueDisplay = document.getElementById(name + 'Val');
+            slider.addEventListener('input', () => {
+                const val = parseFloat(slider.value);
+                valueDisplay.textContent = val.toFixed(1);
+                if (name === 'radius') {
+                    params.neighborRadius = val;
+                    valueDisplay.textContent = val;
+                } else if (name === 'maxSpeed') {
+                    params.maxSpeed = val;
+                } else {
+                    params[name] = val;
+                }
+            });
+        });
+
+        // Dropdown controls
+        document.getElementById('trailTheme').addEventListener('change', (e) => {
+            params.trailTheme = e.target.value;
+        });
+
+        document.getElementById('mouseEffect').addEventListener('change', (e) => {
+            params.mouseEffect = e.target.value;
+        });
+
+        // Preset buttons
+        document.getElementById('schoolingBtn').addEventListener('click', () => {
+            setSlider('separation', 0.8);
+            setSlider('alignment', 3.0);
+            setSlider('cohesion', 1.5);
+            setSlider('radius', 100);
+            setSlider('maxSpeed', 4);
+        });
+
+        document.getElementById('chaoticBtn').addEventListener('click', () => {
+            setSlider('separation', 1.0);
+            setSlider('alignment', 0.3);
+            setSlider('cohesion', 0.3);
+            setSlider('radius', 40);
+            setSlider('maxSpeed', 6);
+        });
+
+        document.getElementById('clusterBtn').addEventListener('click', () => {
+            setSlider('separation', 1.2);
+            setSlider('alignment', 1.0);
+            setSlider('cohesion', 3.5);
+            setSlider('radius', 120);
+            setSlider('maxSpeed', 3);
+        });
+
+        function setSlider(name, value) {
+            const slider = document.getElementById(name);
+            const valueDisplay = document.getElementById(name + 'Val');
+            slider.value = value;
+            valueDisplay.textContent = name === 'radius' ? value : value.toFixed(1);
+            if (name === 'radius') {
+                params.neighborRadius = value;
+            } else if (name === 'maxSpeed') {
+                params.maxSpeed = value;
+            } else {
+                params[name] = value;
+            }
+        }
+
+        // Pause/Resume
+        const pauseBtn = document.getElementById('pauseBtn');
+        pauseBtn.addEventListener('click', () => {
+            paused = !paused;
+            pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+            pauseBtn.classList.toggle('paused', paused);
+        });
+
+        // Reset
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            initBoids();
+            ctx.fillStyle = '#0f0f23';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Clear obstacles
+        document.getElementById('clearObstaclesBtn').addEventListener('click', () => {
+            obstacles = [];
+            updateObstacleCount();
+        });
+
+        // Start simulation
+        initBoids();
+        updateObstacleCount();
+        animate();
+    </script>
+</body>
+</html>
