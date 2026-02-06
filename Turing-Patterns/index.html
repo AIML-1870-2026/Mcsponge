@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turing Patterns Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: #0f0f1a;
+        }
+        canvas {
+            border: 1px solid #2a2a4a;
+        }
+        canvas.brush-mode {
+            cursor: crosshair;
+        }
+        #top-controls {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        #top-controls button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        #pauseBtn {
+            background: #7c4dff;
+            color: white;
+        }
+        #pauseBtn:hover {
+            background: #9d7aff;
+        }
+        #pauseBtn.paused {
+            background: #ff9800;
+        }
+        #resetBtn {
+            background: #5e35b1;
+            color: white;
+        }
+        #resetBtn:hover {
+            background: #7e57c2;
+        }
+        #brush-preview {
+            position: absolute;
+            pointer-events: none;
+            border: 2px solid rgba(179, 136, 255, 0.7);
+            border-radius: 50%;
+            display: none;
+            z-index: 5;
+        }
+        #menu-panel {
+            width: 280px;
+            background: #12121f;
+            border-left: 2px solid #2a2a4a;
+            padding: 25px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            overflow-y: auto;
+        }
+        .panel-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #b388ff;
+            margin-bottom: 5px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .section-title {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #2a2a4a;
+            padding-bottom: 8px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .control-group label {
+            font-size: 13px;
+            color: #aaa;
+        }
+        .control-group select {
+            padding: 10px 12px;
+            font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            background: #1e1e32;
+            color: #fff;
+            cursor: pointer;
+            outline: none;
+            border: 1px solid #3a3a5a;
+        }
+        .control-group select:hover {
+            background: #2a2a44;
+        }
+        .control-group select:focus {
+            border-color: #7c4dff;
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .slider-header label {
+            font-size: 13px;
+            color: #aaa;
+        }
+        .slider-value {
+            font-size: 13px;
+            color: #b388ff;
+            font-weight: bold;
+            font-family: monospace;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #2a2a44;
+            border-radius: 3px;
+            outline: none;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #7c4dff;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb:hover {
+            background: #9d7aff;
+        }
+        .info-box {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            color: #777;
+            line-height: 1.5;
+            border: 1px solid #2a2a4a;
+        }
+        .info-box strong {
+            color: #b388ff;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .brush-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+        <div id="brush-preview"></div>
+        <div id="top-controls">
+            <button id="pauseBtn">Pause</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+    <div id="menu-panel">
+        <div class="panel-title">Turing Patterns</div>
+
+        <div class="section">
+            <div class="section-title">Pattern Type</div>
+            <div class="control-group">
+                <select id="patternType">
+                    <option value="spots">Spots</option>
+                    <option value="stripes">Stripes</option>
+                    <option value="waves">Waves</option>
+                    <option value="maze">Maze</option>
+                    <option value="spirals">Spirals</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Color Scheme</div>
+            <div class="control-group">
+                <select id="colorScheme">
+                    <option value="default">Default (Purple)</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="fire">Fire</option>
+                    <option value="grayscale">Grayscale</option>
+                    <option value="rainbow">Rainbow</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Parameters</div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>Feed Rate (F)</label>
+                    <span class="slider-value" id="feedVal">0.055</span>
+                </div>
+                <input type="range" id="feedRate" min="0.01" max="0.1" step="0.001" value="0.055">
+            </div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>Kill Rate (K)</label>
+                    <span class="slider-value" id="killVal">0.062</span>
+                </div>
+                <input type="range" id="killRate" min="0.03" max="0.07" step="0.001" value="0.062">
+            </div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>Speed</label>
+                    <span class="slider-value" id="speedVal">10</span>
+                </div>
+                <input type="range" id="speed" min="1" max="30" step="1" value="10">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Mouse Settings</div>
+            <div class="control-group">
+                <label>Mode</label>
+                <select id="mouseMode">
+                    <option value="off">Off</option>
+                    <option value="brush">Brush</option>
+                </select>
+            </div>
+            <div class="brush-controls hidden" id="brushControls">
+                <div class="control-group">
+                    <label>Chemical</label>
+                    <select id="brushChemical">
+                        <option value="A">Chemical A (Substrate)</option>
+                        <option value="B">Chemical B (Activator)</option>
+                    </select>
+                </div>
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <label>Brush Size</label>
+                        <span class="slider-value" id="brushSizeVal">10</span>
+                    </div>
+                    <input type="range" id="brushSize" min="2" max="30" step="1" value="10">
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>Gray-Scott Model</strong><br>
+            Reaction-diffusion system that creates organic patterns through chemical interactions. Adjust F and K to explore different pattern formations.
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const brushPreview = document.getElementById('brush-preview');
+
+        // Canvas sizing
+        const WIDTH = 200;
+        const HEIGHT = 150;
+        const SCALE = 4;
+        canvas.width = WIDTH * SCALE;
+        canvas.height = HEIGHT * SCALE;
+        ctx.imageSmoothingEnabled = false;
+
+        // Simulation parameters
+        let params = {
+            feed: 0.055,
+            kill: 0.062,
+            dA: 1.0,
+            dB: 0.5,
+            speed: 10,
+            colorScheme: 'default'
+        };
+
+        // Mouse/brush settings
+        let mouseSettings = {
+            mode: 'off',
+            chemical: 'B',
+            brushSize: 10
+        };
+
+        let isMouseDown = false;
+        let mousePos = { x: -1000, y: -1000 };
+
+        // Pattern presets (F, K values)
+        const patterns = {
+            spots: { feed: 0.055, kill: 0.062 },
+            stripes: { feed: 0.035, kill: 0.060 },
+            waves: { feed: 0.014, kill: 0.045 },
+            maze: { feed: 0.029, kill: 0.057 },
+            spirals: { feed: 0.018, kill: 0.051 }
+        };
+
+        // Color schemes
+        const colorSchemes = {
+            default: (v) => {
+                const t = Math.max(0, Math.min(1, v));
+                return [
+                    Math.floor(30 + t * 100),
+                    Math.floor(20 + t * 50),
+                    Math.floor(60 + t * 195)
+                ];
+            },
+            ocean: (v) => {
+                const t = Math.max(0, Math.min(1, v));
+                return [
+                    Math.floor(10 + t * 30),
+                    Math.floor(50 + t * 150),
+                    Math.floor(80 + t * 175)
+                ];
+            },
+            fire: (v) => {
+                const t = Math.max(0, Math.min(1, v));
+                if (t < 0.5) {
+                    return [
+                        Math.floor(t * 2 * 255),
+                        Math.floor(t * 2 * 100),
+                        0
+                    ];
+                } else {
+                    return [
+                        255,
+                        Math.floor(100 + (t - 0.5) * 2 * 155),
+                        Math.floor((t - 0.5) * 2 * 100)
+                    ];
+                }
+            },
+            grayscale: (v) => {
+                const t = Math.max(0, Math.min(1, v));
+                const g = Math.floor(t * 255);
+                return [g, g, g];
+            },
+            rainbow: (v) => {
+                const t = Math.max(0, Math.min(1, v));
+                const hue = t * 360;
+                return hslToRgb(hue, 80, 50);
+            }
+        };
+
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+            const m = l - c / 2;
+            let r, g, b;
+            if (h < 60) { r = c; g = x; b = 0; }
+            else if (h < 120) { r = x; g = c; b = 0; }
+            else if (h < 180) { r = 0; g = c; b = x; }
+            else if (h < 240) { r = 0; g = x; b = c; }
+            else if (h < 300) { r = x; g = 0; b = c; }
+            else { r = c; g = 0; b = x; }
+            return [
+                Math.floor((r + m) * 255),
+                Math.floor((g + m) * 255),
+                Math.floor((b + m) * 255)
+            ];
+        }
+
+        // Grid arrays
+        let gridA = [];
+        let gridB = [];
+        let nextA = [];
+        let nextB = [];
+        let paused = false;
+
+        // Initialize grids
+        function initGrid() {
+            gridA = [];
+            gridB = [];
+            nextA = [];
+            nextB = [];
+
+            for (let y = 0; y < HEIGHT; y++) {
+                gridA[y] = [];
+                gridB[y] = [];
+                nextA[y] = [];
+                nextB[y] = [];
+                for (let x = 0; x < WIDTH; x++) {
+                    gridA[y][x] = 1;
+                    gridB[y][x] = 0;
+                    nextA[y][x] = 1;
+                    nextB[y][x] = 0;
+                }
+            }
+
+            // Add initial seed pattern
+            seedPattern();
+        }
+
+        function seedPattern() {
+            // Central seed
+            const cx = Math.floor(WIDTH / 2);
+            const cy = Math.floor(HEIGHT / 2);
+            const radius = 10;
+
+            for (let y = cy - radius; y < cy + radius; y++) {
+                for (let x = cx - radius; x < cx + radius; x++) {
+                    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+                        const dx = x - cx;
+                        const dy = y - cy;
+                        if (dx * dx + dy * dy < radius * radius) {
+                            gridA[y][x] = 0;
+                            gridB[y][x] = 1;
+                        }
+                    }
+                }
+            }
+
+            // Random smaller seeds
+            for (let i = 0; i < 5; i++) {
+                const sx = Math.floor(Math.random() * (WIDTH - 20)) + 10;
+                const sy = Math.floor(Math.random() * (HEIGHT - 20)) + 10;
+                const sr = 5;
+                for (let y = sy - sr; y < sy + sr; y++) {
+                    for (let x = sx - sr; x < sx + sr; x++) {
+                        if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+                            gridA[y][x] = 0;
+                            gridB[y][x] = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Paint chemical at position
+        function paintChemical(canvasX, canvasY) {
+            const gridX = Math.floor(canvasX / SCALE);
+            const gridY = Math.floor(canvasY / SCALE);
+            const radius = mouseSettings.brushSize;
+
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    if (dx * dx + dy * dy <= radius * radius) {
+                        const x = gridX + dx;
+                        const y = gridY + dy;
+                        if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+                            if (mouseSettings.chemical === 'A') {
+                                gridA[y][x] = 1;
+                                gridB[y][x] = 0;
+                            } else {
+                                gridA[y][x] = 0;
+                                gridB[y][x] = 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Mouse event handlers
+        canvas.addEventListener('mousedown', (e) => {
+            if (mouseSettings.mode === 'brush') {
+                isMouseDown = true;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                paintChemical(x, y);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+
+            if (mouseSettings.mode === 'brush') {
+                updateBrushPreview(e.clientX, e.clientY);
+                if (isMouseDown) {
+                    paintChemical(mousePos.x, mousePos.y);
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isMouseDown = false;
+            brushPreview.style.display = 'none';
+        });
+
+        canvas.addEventListener('mouseenter', (e) => {
+            if (mouseSettings.mode === 'brush') {
+                brushPreview.style.display = 'block';
+                updateBrushPreview(e.clientX, e.clientY);
+            }
+        });
+
+        function updateBrushPreview(clientX, clientY) {
+            const container = document.getElementById('canvas-container');
+            const containerRect = container.getBoundingClientRect();
+            const size = mouseSettings.brushSize * SCALE * 2;
+
+            brushPreview.style.width = size + 'px';
+            brushPreview.style.height = size + 'px';
+            brushPreview.style.left = (clientX - containerRect.left - size / 2) + 'px';
+            brushPreview.style.top = (clientY - containerRect.top - size / 2) + 'px';
+
+            // Change color based on chemical
+            if (mouseSettings.chemical === 'A') {
+                brushPreview.style.borderColor = 'rgba(100, 200, 255, 0.7)';
+            } else {
+                brushPreview.style.borderColor = 'rgba(179, 136, 255, 0.7)';
+            }
+        }
+
+        // Laplacian calculation with wrapping
+        function laplacian(grid, x, y) {
+            const left = (x - 1 + WIDTH) % WIDTH;
+            const right = (x + 1) % WIDTH;
+            const up = (y - 1 + HEIGHT) % HEIGHT;
+            const down = (y + 1) % HEIGHT;
+
+            return (
+                grid[y][left] * 0.2 +
+                grid[y][right] * 0.2 +
+                grid[up][x] * 0.2 +
+                grid[down][x] * 0.2 +
+                grid[up][left] * 0.05 +
+                grid[up][right] * 0.05 +
+                grid[down][left] * 0.05 +
+                grid[down][right] * 0.05 -
+                grid[y][x]
+            );
+        }
+
+        // Simulation step
+        function simulate() {
+            const { feed, kill, dA, dB } = params;
+
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const a = gridA[y][x];
+                    const b = gridB[y][x];
+                    const lapA = laplacian(gridA, x, y);
+                    const lapB = laplacian(gridB, x, y);
+                    const abb = a * b * b;
+
+                    nextA[y][x] = a + (dA * lapA - abb + feed * (1 - a));
+                    nextB[y][x] = b + (dB * lapB + abb - (kill + feed) * b);
+
+                    // Clamp values
+                    nextA[y][x] = Math.max(0, Math.min(1, nextA[y][x]));
+                    nextB[y][x] = Math.max(0, Math.min(1, nextB[y][x]));
+                }
+            }
+
+            // Swap grids
+            [gridA, nextA] = [nextA, gridA];
+            [gridB, nextB] = [nextB, gridB];
+        }
+
+        // Render
+        function render() {
+            const imageData = ctx.createImageData(WIDTH, HEIGHT);
+            const colorFn = colorSchemes[params.colorScheme];
+
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const idx = (y * WIDTH + x) * 4;
+                    const value = gridB[y][x];
+                    const [r, g, b] = colorFn(value);
+                    imageData.data[idx] = r;
+                    imageData.data[idx + 1] = g;
+                    imageData.data[idx + 2] = b;
+                    imageData.data[idx + 3] = 255;
+                }
+            }
+
+            // Draw scaled
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = WIDTH;
+            tempCanvas.height = HEIGHT;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imageData, 0, 0);
+
+            ctx.drawImage(tempCanvas, 0, 0, WIDTH, HEIGHT, 0, 0, canvas.width, canvas.height);
+        }
+
+        // Animation loop
+        function animate() {
+            if (!paused) {
+                for (let i = 0; i < params.speed; i++) {
+                    simulate();
+                }
+                render();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // UI Controls
+        document.getElementById('patternType').addEventListener('change', (e) => {
+            const preset = patterns[e.target.value];
+            params.feed = preset.feed;
+            params.kill = preset.kill;
+
+            document.getElementById('feedRate').value = preset.feed;
+            document.getElementById('feedVal').textContent = preset.feed.toFixed(3);
+            document.getElementById('killRate').value = preset.kill;
+            document.getElementById('killVal').textContent = preset.kill.toFixed(3);
+
+            initGrid();
+        });
+
+        document.getElementById('colorScheme').addEventListener('change', (e) => {
+            params.colorScheme = e.target.value;
+        });
+
+        document.getElementById('feedRate').addEventListener('input', (e) => {
+            params.feed = parseFloat(e.target.value);
+            document.getElementById('feedVal').textContent = params.feed.toFixed(3);
+        });
+
+        document.getElementById('killRate').addEventListener('input', (e) => {
+            params.kill = parseFloat(e.target.value);
+            document.getElementById('killVal').textContent = params.kill.toFixed(3);
+        });
+
+        document.getElementById('speed').addEventListener('input', (e) => {
+            params.speed = parseInt(e.target.value);
+            document.getElementById('speedVal').textContent = params.speed;
+        });
+
+        // Mouse settings controls
+        document.getElementById('mouseMode').addEventListener('change', (e) => {
+            mouseSettings.mode = e.target.value;
+            const brushControls = document.getElementById('brushControls');
+
+            if (e.target.value === 'brush') {
+                brushControls.classList.remove('hidden');
+                canvas.classList.add('brush-mode');
+            } else {
+                brushControls.classList.add('hidden');
+                canvas.classList.remove('brush-mode');
+                brushPreview.style.display = 'none';
+            }
+        });
+
+        document.getElementById('brushChemical').addEventListener('change', (e) => {
+            mouseSettings.chemical = e.target.value;
+        });
+
+        document.getElementById('brushSize').addEventListener('input', (e) => {
+            mouseSettings.brushSize = parseInt(e.target.value);
+            document.getElementById('brushSizeVal').textContent = mouseSettings.brushSize;
+        });
+
+        // Pause/Resume
+        const pauseBtn = document.getElementById('pauseBtn');
+        pauseBtn.addEventListener('click', () => {
+            paused = !paused;
+            pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+            pauseBtn.classList.toggle('paused', paused);
+        });
+
+        // Reset
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            initGrid();
+        });
+
+        // Start
+        initGrid();
+        animate();
+    </script>
+</body>
+</html>
