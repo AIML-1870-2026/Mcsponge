@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Julia Set Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: #0f0f1a;
+        }
+        canvas {
+            border: 1px solid #2a2a4a;
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+        canvas.edu-cursor {
+            cursor: crosshair;
+        }
+        #top-controls {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+        }
+        #loading {
+            position: absolute;
+            top: 55px;
+            left: 15px;
+            background: rgba(90, 50, 180, 0.8);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            display: none;
+            z-index: 10;
+        }
+        #coords {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #8888cc;
+            border: 1px solid #333;
+            font-family: monospace;
+        }
+        #edu-info {
+            position: absolute;
+            bottom: 15px;
+            right: 310px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #ccc;
+            border: 1px solid #5e35b1;
+            font-family: monospace;
+            line-height: 1.7;
+            max-width: 340px;
+            display: none;
+        }
+        #edu-info strong {
+            color: #b388ff;
+        }
+        #edu-info .escaped {
+            color: #ff6b6b;
+        }
+        #edu-info .bounded {
+            color: #69f0ae;
+        }
+        #edu-banner {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(94, 53, 177, 0.85);
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            display: none;
+            z-index: 10;
+            letter-spacing: 0.5px;
+        }
+        #menu-panel {
+            width: 290px;
+            background: #10101e;
+            border-left: 2px solid #2a2a4a;
+            padding: 22px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            overflow-y: auto;
+        }
+        .panel-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #b388ff;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .section-title {
+            font-size: 11px;
+            color: #7777aa;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #252540;
+            padding-bottom: 7px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .control-group label {
+            font-size: 13px;
+            color: #999;
+        }
+        .control-group select {
+            padding: 9px 12px;
+            font-size: 13px;
+            border-radius: 6px;
+            background: #1a1a30;
+            color: #fff;
+            cursor: pointer;
+            outline: none;
+            border: 1px solid #3a3a5a;
+        }
+        .control-group select:hover {
+            background: #252545;
+        }
+        .control-group select:focus {
+            border-color: #7c4dff;
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .slider-header label {
+            font-size: 13px;
+            color: #999;
+        }
+        .slider-value {
+            font-size: 13px;
+            color: #7c9dff;
+            font-weight: bold;
+            font-family: monospace;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #252545;
+            border-radius: 3px;
+            outline: none;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #6a5acd;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb:hover {
+            background: #8b7cf7;
+        }
+        .number-row {
+            display: flex;
+            gap: 10px;
+        }
+        .number-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .number-group label {
+            font-size: 12px;
+            color: #999;
+        }
+        .number-group input[type="number"] {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 13px;
+            border-radius: 6px;
+            background: #1a1a30;
+            color: #fff;
+            outline: none;
+            border: 1px solid #3a3a5a;
+            font-family: monospace;
+        }
+        .number-group input[type="number"]:focus {
+            border-color: #7c4dff;
+        }
+        .btn {
+            padding: 10px 16px;
+            font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            width: 100%;
+        }
+        .btn-reset {
+            background: #5e35b1;
+            color: white;
+        }
+        .btn-reset:hover {
+            background: #7e57c2;
+        }
+        .btn-edu {
+            background: #1a1a30;
+            color: #b388ff;
+            border: 1px solid #5e35b1;
+        }
+        .btn-edu:hover {
+            background: #252545;
+        }
+        .btn-edu.active {
+            background: #5e35b1;
+            color: white;
+            border-color: #7c4dff;
+        }
+        #menu-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        #menu-panel::-webkit-scrollbar-track {
+            background: #10101e;
+        }
+        #menu-panel::-webkit-scrollbar-thumb {
+            background: #3a3a5a;
+            border-radius: 4px;
+        }
+        #menu-panel::-webkit-scrollbar-thumb:hover {
+            background: #5e35b1;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+        <div id="top-controls">
+            <button class="btn btn-edu" id="eduBtn">Educational Mode</button>
+        </div>
+        <div id="loading">Rendering...</div>
+        <div id="coords">Move mouse over fractal</div>
+        <div id="edu-banner">Educational Mode — Click anywhere to trace iteration path</div>
+        <div id="edu-info"></div>
+    </div>
+    <div id="menu-panel">
+        <div class="panel-title">Fractal Explorer</div>
+
+        <div class="section">
+            <div class="section-title">Fractal Type</div>
+            <div class="control-group">
+                <select id="fractalType">
+                    <option value="julia">Julia Set</option>
+                    <option value="mandelbrot">Mandelbrot Set</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Rendering</div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>Max Iterations</label>
+                    <span class="slider-value" id="iterVal">200</span>
+                </div>
+                <input type="range" id="maxIter" min="50" max="1000" step="10" value="200">
+            </div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>Escape Radius</label>
+                    <span class="slider-value" id="escapeVal">4.0</span>
+                </div>
+                <input type="range" id="escapeRadius" min="2" max="20" step="0.5" value="4">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Presets</div>
+            <div class="control-group">
+                <select id="preset">
+                    <option value="none">-- Select Preset --</option>
+                    <option value="dendrite">Dendrite</option>
+                    <option value="spiral">Spiral</option>
+                    <option value="rabbit">Douady's Rabbit</option>
+                    <option value="sanmarco">San Marco</option>
+                    <option value="siegel">Siegel Disk</option>
+                    <option value="dragons">Dragons</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Color Scheme</div>
+            <div class="control-group">
+                <select id="colorScheme">
+                    <option value="default">Default</option>
+                    <option value="fire">Fire</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="rainbow">Rainbow</option>
+                    <option value="grayscale">Grayscale</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">View</div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>Zoom</label>
+                    <span class="slider-value" id="zoomVal">1.0x</span>
+                </div>
+                <input type="range" id="zoomSlider" min="0" max="10" step="0.1" value="0">
+            </div>
+            <div class="number-row">
+                <div class="number-group">
+                    <label>Center X</label>
+                    <input type="number" id="centerX" value="0" step="0.1">
+                </div>
+                <div class="number-group">
+                    <label>Center Y</label>
+                    <input type="number" id="centerY" value="0" step="0.1">
+                </div>
+            </div>
+            <button class="btn btn-reset" id="resetViewBtn">Reset View</button>
+        </div>
+
+        <div class="section" id="juliaSection">
+            <div class="section-title">Julia Parameters (C = a + bi)</div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>Real (a)</label>
+                    <span class="slider-value" id="realVal">-0.700</span>
+                </div>
+                <input type="range" id="realPart" min="-2" max="2" step="0.001" value="-0.7">
+            </div>
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>Imaginary (b)</label>
+                    <span class="slider-value" id="imagVal">0.270</span>
+                </div>
+                <input type="range" id="imagPart" min="-2" max="2" step="0.001" value="0.27">
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loadingEl = document.getElementById('loading');
+        const coordsEl = document.getElementById('coords');
+        const eduInfoEl = document.getElementById('edu-info');
+        const eduBannerEl = document.getElementById('edu-banner');
+
+        // Canvas sizing
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            canvas.width = Math.min(container.clientWidth - 30, 1200);
+            canvas.height = Math.min(container.clientHeight - 30, 900);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            scheduleRender();
+        });
+
+        // State
+        let state = {
+            fractalType: 'julia',
+            maxIter: 200,
+            escapeRadius: 4,
+            colorScheme: 'default',
+            zoom: 1,
+            centerX: 0,
+            centerY: 0,
+            juliaA: -0.7,
+            juliaB: 0.27
+        };
+
+        let educationalMode = false;
+        let lastImageData = null;
+
+        // Presets (Julia C values)
+        const presets = {
+            dendrite:  { a: 0,       b: 1       },
+            spiral:    { a: -0.7463, b: 0.1102  },
+            rabbit:    { a: -0.1228, b: 0.7449  },
+            sanmarco:  { a: -0.75,   b: 0       },
+            siegel:    { a: -0.391,  b: -0.587  },
+            dragons:   { a: -0.8,    b: 0.156   }
+        };
+
+        // Color palettes
+        function getColor(t, scheme) {
+            t = Math.max(0, Math.min(1, t));
+            switch (scheme) {
+                case 'fire': {
+                    if (t < 0.33) return [Math.floor(t * 3 * 255), 0, 0];
+                    if (t < 0.66) return [255, Math.floor((t - 0.33) * 3 * 255), 0];
+                    return [255, 255, Math.floor((t - 0.66) * 3 * 255)];
+                }
+                case 'ocean': {
+                    return [
+                        Math.floor(t * 50),
+                        Math.floor(30 + t * 150),
+                        Math.floor(80 + t * 175)
+                    ];
+                }
+                case 'rainbow': {
+                    const h = t * 360;
+                    return hslToRgb(h, 85, 50);
+                }
+                case 'grayscale': {
+                    const g = Math.floor(t * 255);
+                    return [g, g, g];
+                }
+                default: {
+                    return [
+                        Math.floor(30 + t * 130),
+                        Math.floor(20 + t * 80),
+                        Math.floor(80 + t * 175)
+                    ];
+                }
+            }
+        }
+
+        function hslToRgb(h, s, l) {
+            s /= 100; l /= 100;
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+            const m = l - c / 2;
+            let r, g, b;
+            if (h < 60) { r = c; g = x; b = 0; }
+            else if (h < 120) { r = x; g = c; b = 0; }
+            else if (h < 180) { r = 0; g = c; b = x; }
+            else if (h < 240) { r = 0; g = x; b = c; }
+            else if (h < 300) { r = x; g = 0; b = c; }
+            else { r = c; g = 0; b = x; }
+            return [
+                Math.floor((r + m) * 255),
+                Math.floor((g + m) * 255),
+                Math.floor((b + m) * 255)
+            ];
+        }
+
+        // Fractal computation
+        function computeJulia(zx, zy, ca, cb, maxIter, escR2) {
+            let x = zx, y = zy;
+            for (let i = 0; i < maxIter; i++) {
+                const x2 = x * x;
+                const y2 = y * y;
+                if (x2 + y2 > escR2) {
+                    const log_zn = Math.log(x2 + y2) / 2;
+                    const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
+                    return (i + 1 - nu) / maxIter;
+                }
+                y = 2 * x * y + cb;
+                x = x2 - y2 + ca;
+            }
+            return -1;
+        }
+
+        function computeMandelbrot(cx, cy, maxIter, escR2) {
+            let x = 0, y = 0;
+            for (let i = 0; i < maxIter; i++) {
+                const x2 = x * x;
+                const y2 = y * y;
+                if (x2 + y2 > escR2) {
+                    const log_zn = Math.log(x2 + y2) / 2;
+                    const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
+                    return (i + 1 - nu) / maxIter;
+                }
+                y = 2 * x * y + cy;
+                x = x2 - y2 + cx;
+            }
+            return -1;
+        }
+
+        // Trace iteration path (returns array of {x, y} points)
+        function traceJulia(zx, zy, ca, cb, maxIter, escR2) {
+            let x = zx, y = zy;
+            const path = [{ x, y }];
+            for (let i = 0; i < maxIter; i++) {
+                const x2 = x * x;
+                const y2 = y * y;
+                if (x2 + y2 > escR2) {
+                    return { path, escaped: true, iterations: i };
+                }
+                const newY = 2 * x * y + cb;
+                const newX = x2 - y2 + ca;
+                x = newX;
+                y = newY;
+                path.push({ x, y });
+            }
+            return { path, escaped: false, iterations: maxIter };
+        }
+
+        function traceMandelbrot(cx, cy, maxIter, escR2) {
+            let x = 0, y = 0;
+            const path = [{ x, y }];
+            for (let i = 0; i < maxIter; i++) {
+                const x2 = x * x;
+                const y2 = y * y;
+                if (x2 + y2 > escR2) {
+                    return { path, escaped: true, iterations: i };
+                }
+                const newY = 2 * x * y + cy;
+                const newX = x2 - y2 + cx;
+                x = newX;
+                y = newY;
+                path.push({ x, y });
+            }
+            return { path, escaped: false, iterations: maxIter };
+        }
+
+        // Convert complex coordinate to pixel
+        function complexToPixel(cx, cy) {
+            const scale = 3 / (state.zoom * Math.min(canvas.width, canvas.height));
+            const px = (cx - state.centerX) / scale + canvas.width / 2;
+            const py = (cy - state.centerY) / scale + canvas.height / 2;
+            return { px, py };
+        }
+
+        // Pixel to complex coordinate
+        function pixelToComplex(px, py) {
+            const scale = 3 / (state.zoom * Math.min(canvas.width, canvas.height));
+            const cx = state.centerX + (px - canvas.width / 2) * scale;
+            const cy = state.centerY + (py - canvas.height / 2) * scale;
+            return { cx, cy };
+        }
+
+        // Draw the iteration path overlay
+        function drawPath(traceResult, startCx, startCy) {
+            const { path, escaped, iterations } = traceResult;
+
+            // Restore the fractal image
+            if (lastImageData) {
+                ctx.putImageData(lastImageData, 0, 0);
+            }
+
+            // Dim the background slightly
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const maxPoints = Math.min(path.length, 200);
+
+            // Draw path lines
+            ctx.beginPath();
+            for (let i = 0; i < maxPoints; i++) {
+                const { px, py } = complexToPixel(path[i].x, path[i].y);
+                if (i === 0) {
+                    ctx.moveTo(px, py);
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+            ctx.strokeStyle = escaped ? 'rgba(255, 107, 107, 0.6)' : 'rgba(105, 240, 174, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw points along the path
+            for (let i = 0; i < maxPoints; i++) {
+                const { px, py } = complexToPixel(path[i].x, path[i].y);
+                const t = i / maxPoints;
+
+                // Size: larger for first and last points
+                let size = 3;
+                if (i === 0) size = 7;
+                else if (i === maxPoints - 1) size = 5;
+
+                ctx.beginPath();
+                ctx.arc(px, py, size, 0, Math.PI * 2);
+
+                if (i === 0) {
+                    // Start point
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    ctx.strokeStyle = '#b388ff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else {
+                    // Gradient from blue to red/green
+                    if (escaped) {
+                        const r = Math.floor(100 + t * 155);
+                        const g = Math.floor(100 - t * 60);
+                        const b = Math.floor(255 - t * 155);
+                        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.9 - t * 0.4})`;
+                    } else {
+                        const r = Math.floor(50 + t * 50);
+                        const g = Math.floor(200 + t * 55);
+                        const b = Math.floor(140 + t * 40);
+                        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.9 - t * 0.4})`;
+                    }
+                    ctx.fill();
+                }
+
+                // Draw iteration number on early points
+                if (i > 0 && i <= 10) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = '10px monospace';
+                    ctx.fillText(i, px + size + 3, py - size);
+                }
+            }
+
+            // Update info panel
+            const z0 = `${startCx.toFixed(4)} + ${startCy.toFixed(4)}i`;
+            const lastPt = path[maxPoints - 1];
+            const finalMag = Math.sqrt(lastPt.x * lastPt.x + lastPt.y * lastPt.y);
+            const statusClass = escaped ? 'escaped' : 'bounded';
+            const statusText = escaped
+                ? `Escaped after <span class="escaped">${iterations}</span> iterations`
+                : `<span class="bounded">Bounded</span> (did not escape in ${iterations} iterations)`;
+
+            eduInfoEl.innerHTML = `
+                <strong>Point:</strong> z = ${z0}<br>
+                <strong>Status:</strong> ${statusText}<br>
+                <strong>Path length:</strong> ${maxPoints} points shown<br>
+                <strong>Final |z|:</strong> ${finalMag.toFixed(4)}<br>
+                <strong>Escape radius:</strong> ${state.escapeRadius}<br>
+                <br>
+                <span style="color:#fff;">z<sub>0</sub></span> = white dot &nbsp;
+                <span class="${statusClass}">path</span> = ${escaped ? 'escaped' : 'bounded'}
+            `;
+            eduInfoEl.style.display = 'block';
+        }
+
+        // Render
+        let renderTimeout = null;
+        function scheduleRender() {
+            if (renderTimeout) clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(render, 30);
+        }
+
+        function render() {
+            loadingEl.style.display = 'block';
+
+            requestAnimationFrame(() => {
+                const w = canvas.width;
+                const h = canvas.height;
+                const imageData = ctx.createImageData(w, h);
+                const data = imageData.data;
+                const { maxIter, escapeRadius, colorScheme, fractalType, juliaA, juliaB, zoom, centerX, centerY } = state;
+                const escR2 = escapeRadius * escapeRadius;
+                const scale = 3 / (zoom * Math.min(w, h));
+
+                for (let py = 0; py < h; py++) {
+                    for (let px = 0; px < w; px++) {
+                        const cx = centerX + (px - w / 2) * scale;
+                        const cy = centerY + (py - h / 2) * scale;
+
+                        let t;
+                        if (fractalType === 'julia') {
+                            t = computeJulia(cx, cy, juliaA, juliaB, maxIter, escR2);
+                        } else {
+                            t = computeMandelbrot(cx, cy, maxIter, escR2);
+                        }
+
+                        const idx = (py * w + px) * 4;
+                        if (t < 0) {
+                            data[idx] = 0;
+                            data[idx + 1] = 0;
+                            data[idx + 2] = 0;
+                        } else {
+                            const [r, g, b] = getColor(t, colorScheme);
+                            data[idx] = r;
+                            data[idx + 1] = g;
+                            data[idx + 2] = b;
+                        }
+                        data[idx + 3] = 255;
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+                lastImageData = ctx.getImageData(0, 0, w, h);
+                loadingEl.style.display = 'none';
+            });
+        }
+
+        // --- UI Controls ---
+
+        // Fractal type
+        document.getElementById('fractalType').addEventListener('change', (e) => {
+            state.fractalType = e.target.value;
+            const juliaSection = document.getElementById('juliaSection');
+            if (e.target.value === 'julia') {
+                juliaSection.classList.remove('hidden');
+            } else {
+                juliaSection.classList.add('hidden');
+            }
+            resetView();
+            scheduleRender();
+        });
+
+        // Max iterations
+        document.getElementById('maxIter').addEventListener('input', (e) => {
+            state.maxIter = parseInt(e.target.value);
+            document.getElementById('iterVal').textContent = state.maxIter;
+            scheduleRender();
+        });
+
+        // Escape radius
+        document.getElementById('escapeRadius').addEventListener('input', (e) => {
+            state.escapeRadius = parseFloat(e.target.value);
+            document.getElementById('escapeVal').textContent = state.escapeRadius.toFixed(1);
+            scheduleRender();
+        });
+
+        // Presets
+        document.getElementById('preset').addEventListener('change', (e) => {
+            const p = presets[e.target.value];
+            if (!p) return;
+
+            if (state.fractalType !== 'julia') {
+                state.fractalType = 'julia';
+                document.getElementById('fractalType').value = 'julia';
+                document.getElementById('juliaSection').classList.remove('hidden');
+            }
+
+            state.juliaA = p.a;
+            state.juliaB = p.b;
+            document.getElementById('realPart').value = p.a;
+            document.getElementById('realVal').textContent = p.a.toFixed(3);
+            document.getElementById('imagPart').value = p.b;
+            document.getElementById('imagVal').textContent = p.b.toFixed(3);
+
+            resetView();
+            scheduleRender();
+        });
+
+        // Color scheme
+        document.getElementById('colorScheme').addEventListener('change', (e) => {
+            state.colorScheme = e.target.value;
+            scheduleRender();
+        });
+
+        // Zoom slider
+        document.getElementById('zoomSlider').addEventListener('input', (e) => {
+            const v = parseFloat(e.target.value);
+            state.zoom = Math.pow(2, v);
+            document.getElementById('zoomVal').textContent = state.zoom.toFixed(1) + 'x';
+            scheduleRender();
+        });
+
+        // Center X/Y
+        document.getElementById('centerX').addEventListener('change', (e) => {
+            state.centerX = parseFloat(e.target.value) || 0;
+            scheduleRender();
+        });
+        document.getElementById('centerY').addEventListener('change', (e) => {
+            state.centerY = parseFloat(e.target.value) || 0;
+            scheduleRender();
+        });
+
+        // Reset view
+        document.getElementById('resetViewBtn').addEventListener('click', () => {
+            resetView();
+            scheduleRender();
+        });
+
+        function resetView() {
+            state.zoom = 1;
+            state.centerX = 0;
+            state.centerY = 0;
+            document.getElementById('zoomSlider').value = 0;
+            document.getElementById('zoomVal').textContent = '1.0x';
+            document.getElementById('centerX').value = 0;
+            document.getElementById('centerY').value = 0;
+        }
+
+        // Julia parameters
+        document.getElementById('realPart').addEventListener('input', (e) => {
+            state.juliaA = parseFloat(e.target.value);
+            document.getElementById('realVal').textContent = state.juliaA.toFixed(3);
+            document.getElementById('preset').value = 'none';
+            scheduleRender();
+        });
+        document.getElementById('imagPart').addEventListener('input', (e) => {
+            state.juliaB = parseFloat(e.target.value);
+            document.getElementById('imagVal').textContent = state.juliaB.toFixed(3);
+            document.getElementById('preset').value = 'none';
+            scheduleRender();
+        });
+
+        // --- Educational Mode ---
+        const eduBtn = document.getElementById('eduBtn');
+        eduBtn.addEventListener('click', () => {
+            educationalMode = !educationalMode;
+            eduBtn.classList.toggle('active', educationalMode);
+            eduBtn.textContent = educationalMode ? 'Exit Educational Mode' : 'Educational Mode';
+            eduBannerEl.style.display = educationalMode ? 'block' : 'none';
+            canvas.classList.toggle('edu-cursor', educationalMode);
+
+            if (!educationalMode) {
+                eduInfoEl.style.display = 'none';
+                // Restore clean fractal
+                if (lastImageData) {
+                    ctx.putImageData(lastImageData, 0, 0);
+                }
+            }
+        });
+
+        // --- Mouse interaction ---
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (educationalMode) return;
+            isDragging = true;
+            dragStart.x = e.clientX;
+            dragStart.y = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            const { cx, cy } = pixelToComplex(px, py);
+            coordsEl.textContent = `${cx >= 0 ? ' ' : ''}${cx.toFixed(6)} ${cy >= 0 ? '+' : '-'} ${Math.abs(cy).toFixed(6)}i`;
+
+            if (isDragging && !educationalMode) {
+                const dx = e.clientX - dragStart.x;
+                const dy = e.clientY - dragStart.y;
+                dragStart.x = e.clientX;
+                dragStart.y = e.clientY;
+
+                const scale = 3 / (state.zoom * Math.min(canvas.width, canvas.height));
+                state.centerX -= dx * scale;
+                state.centerY -= dy * scale;
+
+                document.getElementById('centerX').value = state.centerX.toFixed(4);
+                document.getElementById('centerY').value = state.centerY.toFixed(4);
+                scheduleRender();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        // Educational mode: click to trace
+        canvas.addEventListener('click', (e) => {
+            if (!educationalMode) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            const { cx, cy } = pixelToComplex(px, py);
+
+            const escR2 = state.escapeRadius * state.escapeRadius;
+            let traceResult;
+
+            if (state.fractalType === 'julia') {
+                traceResult = traceJulia(cx, cy, state.juliaA, state.juliaB, state.maxIter, escR2);
+            } else {
+                traceResult = traceMandelbrot(cx, cy, state.maxIter, escR2);
+            }
+
+            drawPath(traceResult, cx, cy);
+        });
+
+        // Scroll to zoom
+        canvas.addEventListener('wheel', (e) => {
+            if (educationalMode) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+
+            const { cx, cy } = pixelToComplex(px, py);
+
+            const zoomFactor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
+            state.zoom *= zoomFactor;
+
+            state.centerX = cx + (state.centerX - cx) / zoomFactor;
+            state.centerY = cy + (state.centerY - cy) / zoomFactor;
+
+            const logZoom = Math.log2(state.zoom);
+            document.getElementById('zoomSlider').value = Math.max(0, Math.min(10, logZoom));
+            document.getElementById('zoomVal').textContent = state.zoom.toFixed(1) + 'x';
+            document.getElementById('centerX').value = state.centerX.toFixed(4);
+            document.getElementById('centerY').value = state.centerY.toFixed(4);
+
+            scheduleRender();
+        }, { passive: false });
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
