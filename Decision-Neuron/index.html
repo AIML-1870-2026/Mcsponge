@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Should I Work On This Class?</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ===== VIEW SWITCHING ===== */
+        .view { display: none; width: 100%; height: 100vh; }
+        .view.active { display: flex; }
+
+        /* ===== MAIN VIEW ===== */
+        #main-view {
+            flex-direction: column;
+            align-items: center;
+        }
+        #main-view .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #64b5f6;
+            text-align: center;
+            padding: 18px 0 8px;
+            letter-spacing: 1px;
+        }
+        #main-view .subtitle {
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            width: 100%;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        /* Left Panel */
+        .panel-left {
+            width: 300px;
+            background: #10101e;
+            border-right: 2px solid #1a1a30;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            overflow-y: auto;
+        }
+        .panel-title {
+            font-size: 14px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #252540;
+            padding-bottom: 8px;
+        }
+        .input-card {
+            background: #14142a;
+            border-radius: 10px;
+            padding: 14px 16px;
+            border: 1px solid #252545;
+        }
+        .input-card .input-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #e0e0e0;
+            margin-bottom: 2px;
+        }
+        .input-card .input-desc {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .input-card .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .input-card input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #252545;
+            border-radius: 3px;
+            outline: none;
+        }
+        .input-card input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .input-card .input-val {
+            font-size: 14px;
+            font-weight: bold;
+            font-family: monospace;
+            min-width: 36px;
+            text-align: right;
+        }
+        .input-card .weight-tag {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+        .weight-positive { background: rgba(76, 175, 80, 0.2); color: #66bb6a; }
+        .weight-negative { background: rgba(239, 83, 80, 0.2); color: #ef5350; }
+
+        /* Thumb colors per input */
+        #hw-slider::-webkit-slider-thumb { background: #ff7043; }
+        #health-slider::-webkit-slider-thumb { background: #66bb6a; }
+        #understand-slider::-webkit-slider-thumb { background: #42a5f5; }
+        #grade-slider::-webkit-slider-thumb { background: #ab47bc; }
+
+        /* Center: Neuron Visual */
+        .center-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        #neuron-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Right Panel */
+        .panel-right {
+            width: 320px;
+            background: #10101e;
+            border-left: 2px solid #1a1a30;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+        }
+        .math-section {
+            background: #14142a;
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #252545;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .math-section .math-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .math-val { color: #64b5f6; }
+        .math-pos { color: #66bb6a; }
+        .math-neg { color: #ef5350; }
+        .math-highlight {
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .output-box {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .output-yes {
+            background: rgba(76, 175, 80, 0.15);
+            border: 2px solid #66bb6a;
+            color: #66bb6a;
+        }
+        .output-no {
+            background: rgba(239, 83, 80, 0.15);
+            border: 2px solid #ef5350;
+            color: #ef5350;
+        }
+
+        /* Bottom Bias Bar */
+        .bias-bar {
+            width: 100%;
+            background: #10101e;
+            border-top: 2px solid #1a1a30;
+            padding: 14px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            position: relative;
+        }
+        .bias-bar label {
+            font-size: 13px;
+            color: #aaa;
+            white-space: nowrap;
+        }
+        .bias-bar input[type="range"] {
+            width: 350px;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #252545;
+            border-radius: 3px;
+            outline: none;
+        }
+        .bias-bar input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #ffd54f;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .bias-val {
+            font-size: 15px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #ffd54f;
+            min-width: 50px;
+        }
+        .plot-btn {
+            position: absolute;
+            left: 20px;
+            padding: 10px 18px;
+            font-size: 13px;
+            border: 1px solid #42a5f5;
+            background: #0d1b2a;
+            color: #64b5f6;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .plot-btn:hover {
+            background: #1a2a3a;
+        }
+
+        /* ===== 2D PLOT VIEW ===== */
+        #plot-view {
+            flex-direction: column;
+        }
+        .plot-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: #10101e;
+            border-bottom: 2px solid #1a1a30;
+            gap: 15px;
+        }
+        .back-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            border: 1px solid #42a5f5;
+            background: #0d1b2a;
+            color: #64b5f6;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: #1a2a3a; }
+        .plot-header .plot-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #64b5f6;
+            flex: 1;
+        }
+        .label-toggle {
+            display: flex;
+            gap: 6px;
+        }
+        .label-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .label-btn-yes {
+            background: #1b3a1b;
+            color: #66bb6a;
+            border: 1px solid #2e7d32;
+        }
+        .label-btn-yes.active {
+            background: #2e7d32;
+            color: #fff;
+        }
+        .label-btn-no {
+            background: #3a1b1b;
+            color: #ef5350;
+            border: 1px solid #c62828;
+        }
+        .label-btn-no.active {
+            background: #c62828;
+            color: #fff;
+        }
+        .plot-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .plot-canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0a0a14;
+            position: relative;
+        }
+        #plot-canvas {
+            border: 1px solid #252545;
+            cursor: crosshair;
+        }
+        .axis-label {
+            position: absolute;
+            font-size: 12px;
+            color: #888;
+            font-weight: bold;
+        }
+        .axis-x {
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .axis-y {
+            left: 28px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+        }
+        .plot-sidebar {
+            width: 280px;
+            background: #10101e;
+            border-left: 2px solid #1a1a30;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+        }
+        .train-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .train-btn {
+            flex: 1;
+            padding: 10px 8px;
+            font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            min-width: 70px;
+        }
+        .train-btn-step { background: #1565c0; color: white; }
+        .train-btn-step:hover { background: #1976d2; }
+        .train-btn-train { background: #2e7d32; color: white; }
+        .train-btn-train:hover { background: #388e3c; }
+        .train-btn-reset { background: #c62828; color: white; }
+        .train-btn-reset:hover { background: #d32f2f; }
+        .stat-card {
+            background: #14142a;
+            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid #252545;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .stat-card .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'Segoe UI', sans-serif;
+            margin-bottom: 4px;
+        }
+        .stat-val { color: #64b5f6; font-weight: bold; }
+        .lr-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .lr-group label { font-size: 12px; color: #888; }
+        .lr-group input[type="range"] {
+            flex: 1;
+            height: 5px;
+            -webkit-appearance: none;
+            background: #252545;
+            border-radius: 3px;
+            outline: none;
+        }
+        .lr-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #64b5f6;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .lr-val {
+            font-size: 12px;
+            color: #64b5f6;
+            font-weight: bold;
+            font-family: monospace;
+            min-width: 30px;
+        }
+
+        /* ===== SENSITIVITY VIEW ===== */
+        #sens-view {
+            flex-direction: column;
+        }
+        .sens-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: #10101e;
+            border-bottom: 2px solid #1a1a30;
+            gap: 15px;
+        }
+        .sens-header .plot-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #64b5f6;
+            flex: 1;
+        }
+        .sens-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .sens-canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0a0a14;
+            padding: 20px;
+        }
+        #sens-canvas {
+            border: 1px solid #252545;
+            background: #0c0c1a;
+        }
+        .sens-sidebar {
+            width: 280px;
+            background: #10101e;
+            border-left: 2px solid #1a1a30;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+        }
+        .bar-chart-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .bar-name {
+            font-size: 12px;
+            width: 80px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .bar-track {
+            flex: 1;
+            height: 20px;
+            background: #14142a;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .bar-value {
+            font-size: 11px;
+            font-family: monospace;
+            min-width: 40px;
+            color: #aaa;
+        }
+        .sens-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .sens-btn {
+            position: absolute;
+            right: 20px;
+            padding: 10px 18px;
+            font-size: 13px;
+            border: 1px solid #ffa726;
+            background: #1a1408;
+            color: #ffa726;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .sens-btn:hover {
+            background: #2a2010;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== MAIN VIEW ===== -->
+<div id="main-view" class="view active">
+    <div class="title">Should I Work On This Class?</div>
+    <div class="subtitle">Single Perceptron Decision Neuron</div>
+    <div class="main-content">
+        <div class="panel-left">
+            <div class="panel-title">Input Factors</div>
+
+            <div class="input-card">
+                <div class="input-name">Homework Due / Exam</div>
+                <div class="input-desc">High = Due Soon</div>
+                <div class="slider-row">
+                    <input type="range" id="hw-slider" min="0" max="1" step="0.01" value="0.50">
+                    <span class="input-val" id="hw-val" style="color:#ff7043;">0.50</span>
+                </div>
+                <span class="weight-tag weight-positive">w = +0.80</span>
+            </div>
+
+            <div class="input-card">
+                <div class="input-name">Health</div>
+                <div class="input-desc">High = Fed, Slept, Mentally Well</div>
+                <div class="slider-row">
+                    <input type="range" id="health-slider" min="0" max="1" step="0.01" value="0.50">
+                    <span class="input-val" id="health-val" style="color:#66bb6a;">0.50</span>
+                </div>
+                <span class="weight-tag weight-positive">w = +0.40</span>
+            </div>
+
+            <div class="input-card">
+                <div class="input-name">My Understanding</div>
+                <div class="input-desc">High = Easier Class</div>
+                <div class="slider-row">
+                    <input type="range" id="understand-slider" min="0" max="1" step="0.01" value="0.50">
+                    <span class="input-val" id="understand-val" style="color:#42a5f5;">0.50</span>
+                </div>
+                <span class="weight-tag weight-negative">w = -0.70</span>
+            </div>
+
+            <div class="input-card">
+                <div class="input-name">My Grade</div>
+                <div class="input-desc">High = Good Grade</div>
+                <div class="slider-row">
+                    <input type="range" id="grade-slider" min="0" max="1" step="0.01" value="0.50">
+                    <span class="input-val" id="grade-val" style="color:#ab47bc;">0.50</span>
+                </div>
+                <span class="weight-tag weight-negative">w = -0.30</span>
+            </div>
+        </div>
+
+        <div class="center-area">
+            <canvas id="neuron-canvas"></canvas>
+        </div>
+
+        <div class="panel-right">
+            <div class="panel-title">The Math</div>
+
+            <div class="math-section">
+                <div class="math-label">Weighted Sum</div>
+                <span style="color:#ff7043;">x1</span> &times; w1 = <span id="m-hw">0.50</span> &times; 0.80 = <span class="math-val" id="m-hw-r">0.400</span><br>
+                <span style="color:#66bb6a;">x2</span> &times; w2 = <span id="m-he">0.50</span> &times; 0.40 = <span class="math-val" id="m-he-r">0.200</span><br>
+                <span style="color:#42a5f5;">x3</span> &times; w3 = <span id="m-un">0.50</span> &times; -0.70 = <span class="math-val" id="m-un-r">-0.350</span><br>
+                <span style="color:#ab47bc;">x4</span> &times; w4 = <span id="m-gr">0.50</span> &times; -0.30 = <span class="math-val" id="m-gr-r">-0.150</span>
+            </div>
+
+            <div class="math-section">
+                <div class="math-label">Sum + Bias</div>
+                sum = <span class="math-val" id="m-sum">0.200</span><br>
+                bias = <span style="color:#ffd54f;" id="m-bias">0.500</span><br>
+                z = sum + bias = <span class="math-val math-highlight" id="m-z">0.700</span>
+            </div>
+
+            <div class="math-section">
+                <div class="math-label">Activation (Sigmoid)</div>
+                &sigma;(z) = 1 / (1 + e<sup>-z</sup>)<br>
+                &sigma;(<span id="m-z2">0.700</span>) = <span class="math-val math-highlight" id="m-sig">0.668</span>
+            </div>
+
+            <div class="math-section">
+                <div class="math-label">Decision (Threshold = 0.5)</div>
+                <span id="m-sig2">0.668</span> &ge; 0.5 &rarr; <span class="math-highlight" id="m-dec" style="color:#66bb6a;">YES</span>
+            </div>
+
+            <div class="output-box output-yes" id="output-box">
+                YES — Work on it!
+            </div>
+        </div>
+    </div>
+
+    <div class="bias-bar">
+        <button class="plot-btn" id="go-plot-btn">2D Decision Boundary &rarr;</button>
+        <label>Homework Tendency (Bias)</label>
+        <input type="range" id="bias-slider" min="-1" max="1" step="0.01" value="0.50">
+        <span class="bias-val" id="bias-val">0.50</span>
+        <button class="sens-btn" id="go-sens-btn">Sensitivity Analysis &rarr;</button>
+    </div>
+</div>
+
+<!-- ===== 2D PLOT VIEW ===== -->
+<div id="plot-view" class="view">
+    <div class="plot-header">
+        <button class="back-btn" id="back-btn">&larr; Back</button>
+        <div class="plot-title">2D Decision Boundary</div>
+        <div class="label-toggle">
+            <button class="label-btn label-btn-yes active" id="label-yes-btn">Yes</button>
+            <button class="label-btn label-btn-no" id="label-no-btn">No</button>
+        </div>
+    </div>
+    <div class="plot-body">
+        <div class="plot-canvas-container">
+            <canvas id="plot-canvas"></canvas>
+            <div class="axis-label axis-x">Homework Due / Exam &rarr;</div>
+            <div class="axis-label axis-y">My Understanding &rarr;</div>
+        </div>
+        <div class="plot-sidebar">
+            <div class="panel-title">Training Mode</div>
+
+            <div class="train-controls">
+                <button class="train-btn train-btn-step" id="step-btn">Step</button>
+                <button class="train-btn train-btn-train" id="train-btn">Train</button>
+                <button class="train-btn train-btn-reset" id="reset-btn">Reset</button>
+            </div>
+
+            <div class="lr-group">
+                <label>Learning Rate</label>
+                <input type="range" id="lr-slider" min="0.01" max="1" step="0.01" value="0.1">
+                <span class="lr-val" id="lr-val">0.10</span>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Weights</div>
+                w<sub>homework</sub> = <span class="stat-val" id="s-w1">0.800</span><br>
+                w<sub>understanding</sub> = <span class="stat-val" id="s-w2">-0.700</span><br>
+                bias = <span class="stat-val" id="s-bias">0.500</span>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Training Stats</div>
+                Step: <span class="stat-val" id="s-step">0</span><br>
+                Points: <span class="stat-val" id="s-points">0</span><br>
+                Accuracy: <span class="stat-val" id="s-acc">—</span>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Instructions</div>
+                <span style="color:#aaa; font-family: 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.6;">
+                    1. Select <span style="color:#66bb6a;">Yes</span> or <span style="color:#ef5350;">No</span> label<br>
+                    2. Click on the plot to add points<br>
+                    3. Press <strong>Step</strong> to train one iteration<br>
+                    4. Press <strong>Train</strong> to run many steps<br>
+                    5. Watch the decision boundary shift
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SENSITIVITY VIEW ===== -->
+<div id="sens-view" class="view">
+    <div class="sens-header">
+        <button class="back-btn" id="sens-back-btn">&larr; Back</button>
+        <div class="plot-title">Sensitivity Analysis</div>
+        <div class="sens-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#ff7043;"></div>HW/Exam</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#66bb6a;"></div>Health</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#42a5f5;"></div>Understanding</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ab47bc;"></div>Grade</div>
+        </div>
+    </div>
+    <div class="sens-body">
+        <div class="sens-canvas-container">
+            <canvas id="sens-canvas"></canvas>
+        </div>
+        <div class="sens-sidebar">
+            <div class="panel-title">Influence Ranking</div>
+            <div class="stat-card">
+                <div class="stat-label">How it works</div>
+                <span style="color:#aaa; font-family: 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.6;">
+                    Each curve sweeps one input from 0 &rarr; 1 while holding all others at their current slider values.<br><br>
+                    <strong style="color:#ccc;">Steep</strong> = highly influential<br>
+                    <strong style="color:#66bb6a;">Upward</strong> = positive weight<br>
+                    <strong style="color:#ef5350;">Downward</strong> = negative weight
+                </span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Sensitivity (|&Delta; output|)</div>
+                <div class="bar-chart-container" id="sens-bars"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Current Values</div>
+                <div id="sens-current" style="font-family: monospace; font-size: 12px; line-height: 2; color: #aaa;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== WEIGHTS =====
+    const WEIGHTS = [0.8, 0.4, -0.7, -0.3];
+
+    // ===== MAIN VIEW LOGIC =====
+    const inputs = [
+        { slider: 'hw-slider', val: 'hw-val', mIn: 'm-hw', mRes: 'm-hw-r', w: 0.8 },
+        { slider: 'health-slider', val: 'health-val', mIn: 'm-he', mRes: 'm-he-r', w: 0.4 },
+        { slider: 'understand-slider', val: 'understand-val', mIn: 'm-un', mRes: 'm-un-r', w: -0.7 },
+        { slider: 'grade-slider', val: 'grade-val', mIn: 'm-gr', mRes: 'm-gr-r', w: -0.3 }
+    ];
+
+    function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+    function updateMain() {
+        const vals = inputs.map(inp => parseFloat(document.getElementById(inp.slider).value));
+        const bias = parseFloat(document.getElementById('bias-slider').value);
+
+        // Update value displays
+        vals.forEach((v, i) => {
+            document.getElementById(inputs[i].val).textContent = v.toFixed(2);
+            document.getElementById(inputs[i].mIn).textContent = v.toFixed(2);
+            const r = v * inputs[i].w;
+            document.getElementById(inputs[i].mRes).textContent = r.toFixed(3);
+        });
+
+        document.getElementById('bias-val').textContent = bias.toFixed(2);
+
+        // Compute
+        const sum = vals.reduce((s, v, i) => s + v * inputs[i].w, 0);
+        const z = sum + bias;
+        const sig = sigmoid(z);
+        const decision = sig >= 0.5;
+
+        // Update math
+        document.getElementById('m-sum').textContent = sum.toFixed(3);
+        document.getElementById('m-bias').textContent = bias.toFixed(3);
+        document.getElementById('m-z').textContent = z.toFixed(3);
+        document.getElementById('m-z2').textContent = z.toFixed(3);
+        document.getElementById('m-sig').textContent = sig.toFixed(3);
+        document.getElementById('m-sig2').textContent = sig.toFixed(3);
+
+        const decEl = document.getElementById('m-dec');
+        decEl.textContent = decision ? 'YES' : 'NO';
+        decEl.style.color = decision ? '#66bb6a' : '#ef5350';
+
+        const outBox = document.getElementById('output-box');
+        outBox.className = 'output-box ' + (decision ? 'output-yes' : 'output-no');
+        outBox.textContent = decision ? 'YES — Work on it!' : 'NO — Skip for now';
+
+        drawNeuron(vals, bias, sum, z, sig, decision);
+    }
+
+    // ===== NEURON VISUALIZATION =====
+    const neuronCanvas = document.getElementById('neuron-canvas');
+    const nCtx = neuronCanvas.getContext('2d');
+
+    function resizeNeuron() {
+        const parent = neuronCanvas.parentElement;
+        neuronCanvas.width = parent.clientWidth;
+        neuronCanvas.height = parent.clientHeight;
+    }
+
+    function drawNeuron(vals, bias, sum, z, sig, decision) {
+        resizeNeuron();
+        const w = neuronCanvas.width;
+        const h = neuronCanvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const neuronR = 50;
+
+        nCtx.clearRect(0, 0, w, h);
+
+        const inputNames = ['HW/Exam', 'Health', 'Understand', 'Grade'];
+        const inputColors = ['#ff7043', '#66bb6a', '#42a5f5', '#ab47bc'];
+        const inputY = [cy - 120, cy - 40, cy + 40, cy + 120];
+        const inputX = 90;
+
+        // Draw connections
+        for (let i = 0; i < 4; i++) {
+            const weight = inputs[i].w;
+            const thickness = Math.abs(weight) * 4 + 1;
+            const alpha = 0.3 + Math.abs(vals[i]) * 0.5;
+
+            nCtx.beginPath();
+            nCtx.moveTo(inputX + 35, inputY[i]);
+            nCtx.lineTo(cx - neuronR - 10, cy);
+            nCtx.strokeStyle = weight >= 0
+                ? `rgba(102, 187, 106, ${alpha})`
+                : `rgba(239, 83, 80, ${alpha})`;
+            nCtx.lineWidth = thickness;
+            nCtx.stroke();
+
+            // Weight label on line
+            const mx = (inputX + 35 + cx - neuronR - 10) / 2;
+            const my = (inputY[i] + cy) / 2;
+            nCtx.fillStyle = '#555';
+            nCtx.font = '11px monospace';
+            nCtx.fillText(`w=${weight.toFixed(1)}`, mx - 18, my - 5);
+        }
+
+        // Draw bias connection from bottom
+        nCtx.beginPath();
+        nCtx.moveTo(cx, cy + 140);
+        nCtx.lineTo(cx, cy + neuronR + 10);
+        nCtx.strokeStyle = `rgba(255, 213, 79, ${0.4 + Math.abs(bias) * 0.4})`;
+        nCtx.lineWidth = 3;
+        nCtx.stroke();
+
+        // Bias node
+        nCtx.beginPath();
+        nCtx.arc(cx, cy + 150, 22, 0, Math.PI * 2);
+        nCtx.fillStyle = '#1a1a2e';
+        nCtx.fill();
+        nCtx.strokeStyle = '#ffd54f';
+        nCtx.lineWidth = 2;
+        nCtx.stroke();
+        nCtx.fillStyle = '#ffd54f';
+        nCtx.font = 'bold 12px monospace';
+        nCtx.textAlign = 'center';
+        nCtx.fillText(bias.toFixed(2), cx, cy + 154);
+
+        // Draw input nodes
+        for (let i = 0; i < 4; i++) {
+            nCtx.beginPath();
+            nCtx.arc(inputX, inputY[i], 28, 0, Math.PI * 2);
+            nCtx.fillStyle = '#14142a';
+            nCtx.fill();
+            nCtx.strokeStyle = inputColors[i];
+            nCtx.lineWidth = 2;
+            nCtx.stroke();
+
+            nCtx.fillStyle = inputColors[i];
+            nCtx.font = 'bold 12px monospace';
+            nCtx.textAlign = 'center';
+            nCtx.fillText(vals[i].toFixed(2), inputX, inputY[i] + 4);
+
+            nCtx.fillStyle = '#888';
+            nCtx.font = '10px sans-serif';
+            nCtx.fillText(inputNames[i], inputX, inputY[i] - 16);
+        }
+
+        // Draw neuron (center)
+        const glow = nCtx.createRadialGradient(cx, cy, neuronR * 0.3, cx, cy, neuronR * 1.5);
+        glow.addColorStop(0, decision ? 'rgba(102,187,106,0.15)' : 'rgba(239,83,80,0.15)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        nCtx.fillStyle = glow;
+        nCtx.fillRect(cx - 100, cy - 100, 200, 200);
+
+        nCtx.beginPath();
+        nCtx.arc(cx, cy, neuronR, 0, Math.PI * 2);
+        nCtx.fillStyle = '#14142a';
+        nCtx.fill();
+        nCtx.strokeStyle = decision ? '#66bb6a' : '#ef5350';
+        nCtx.lineWidth = 3;
+        nCtx.stroke();
+
+        nCtx.fillStyle = '#fff';
+        nCtx.font = 'bold 14px monospace';
+        nCtx.fillText('σ(z)', cx, cy - 6);
+        nCtx.fillStyle = decision ? '#66bb6a' : '#ef5350';
+        nCtx.font = 'bold 16px monospace';
+        nCtx.fillText(sig.toFixed(3), cx, cy + 16);
+
+        // Output arrow
+        nCtx.beginPath();
+        nCtx.moveTo(cx + neuronR + 10, cy);
+        nCtx.lineTo(cx + neuronR + 80, cy);
+        nCtx.strokeStyle = decision ? '#66bb6a' : '#ef5350';
+        nCtx.lineWidth = 3;
+        nCtx.stroke();
+
+        // Arrow head
+        nCtx.beginPath();
+        nCtx.moveTo(cx + neuronR + 80, cy);
+        nCtx.lineTo(cx + neuronR + 70, cy - 8);
+        nCtx.lineTo(cx + neuronR + 70, cy + 8);
+        nCtx.closePath();
+        nCtx.fillStyle = decision ? '#66bb6a' : '#ef5350';
+        nCtx.fill();
+
+        // Output label
+        nCtx.font = 'bold 18px sans-serif';
+        nCtx.fillText(decision ? 'YES' : 'NO', cx + neuronR + 110, cy + 6);
+
+        nCtx.textAlign = 'left';
+    }
+
+    // Hook up sliders
+    ['hw-slider', 'health-slider', 'understand-slider', 'grade-slider', 'bias-slider'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateMain);
+    });
+
+    // ===== VIEW SWITCHING =====
+    document.getElementById('go-plot-btn').addEventListener('click', () => {
+        document.getElementById('main-view').classList.remove('active');
+        document.getElementById('plot-view').classList.add('active');
+        initPlot();
+    });
+    document.getElementById('back-btn').addEventListener('click', () => {
+        document.getElementById('plot-view').classList.remove('active');
+        document.getElementById('main-view').classList.add('active');
+        updateMain();
+    });
+
+    // ===== 2D PLOT VIEW LOGIC =====
+    const plotCanvas = document.getElementById('plot-canvas');
+    const pCtx = plotCanvas.getContext('2d');
+    const PLOT_SIZE = 500;
+    plotCanvas.width = PLOT_SIZE;
+    plotCanvas.height = PLOT_SIZE;
+
+    let plotW1 = 0.8;
+    let plotW2 = -0.7;
+    let plotBias = 0.5;
+    let plotLR = 0.1;
+    let plotStep = 0;
+    let dataPoints = [];
+    let currentLabel = 1; // 1 = yes, 0 = no
+    let trainInterval = null;
+
+    // Label toggle
+    document.getElementById('label-yes-btn').addEventListener('click', () => {
+        currentLabel = 1;
+        document.getElementById('label-yes-btn').classList.add('active');
+        document.getElementById('label-no-btn').classList.remove('active');
+    });
+    document.getElementById('label-no-btn').addEventListener('click', () => {
+        currentLabel = 0;
+        document.getElementById('label-no-btn').classList.add('active');
+        document.getElementById('label-yes-btn').classList.remove('active');
+    });
+
+    // Click to add points
+    plotCanvas.addEventListener('click', (e) => {
+        const rect = plotCanvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const x = px / PLOT_SIZE;
+        const y = 1 - py / PLOT_SIZE;
+        dataPoints.push({ x, y, label: currentLabel });
+        drawPlot();
+    });
+
+    // Learning rate
+    document.getElementById('lr-slider').addEventListener('input', (e) => {
+        plotLR = parseFloat(e.target.value);
+        document.getElementById('lr-val').textContent = plotLR.toFixed(2);
+    });
+
+    // Step button
+    document.getElementById('step-btn').addEventListener('click', () => {
+        trainStep();
+        drawPlot();
+    });
+
+    // Train button
+    document.getElementById('train-btn').addEventListener('click', () => {
+        if (trainInterval) {
+            clearInterval(trainInterval);
+            trainInterval = null;
+            document.getElementById('train-btn').textContent = 'Train';
+            return;
+        }
+        document.getElementById('train-btn').textContent = 'Stop';
+        trainInterval = setInterval(() => {
+            for (let i = 0; i < 5; i++) trainStep();
+            drawPlot();
+        }, 50);
+    });
+
+    // Reset button
+    document.getElementById('reset-btn').addEventListener('click', () => {
+        if (trainInterval) { clearInterval(trainInterval); trainInterval = null; }
+        document.getElementById('train-btn').textContent = 'Train';
+        plotW1 = 0.8;
+        plotW2 = -0.7;
+        plotBias = 0.5;
+        plotStep = 0;
+        dataPoints = [];
+        drawPlot();
+    });
+
+    function trainStep() {
+        if (dataPoints.length === 0) return;
+        const idx = plotStep % dataPoints.length;
+        const pt = dataPoints[idx];
+        const z = pt.x * plotW1 + pt.y * plotW2 + plotBias;
+        const pred = sigmoid(z);
+        const error = pt.label - pred;
+        const grad = pred * (1 - pred);
+
+        plotW1 += plotLR * error * grad * pt.x;
+        plotW2 += plotLR * error * grad * pt.y;
+        plotBias += plotLR * error * grad;
+        plotStep++;
+    }
+
+    function getAccuracy() {
+        if (dataPoints.length === 0) return '—';
+        let correct = 0;
+        for (let pt of dataPoints) {
+            const z = pt.x * plotW1 + pt.y * plotW2 + plotBias;
+            const pred = sigmoid(z) >= 0.5 ? 1 : 0;
+            if (pred === pt.label) correct++;
+        }
+        return (correct / dataPoints.length * 100).toFixed(1) + '%';
+    }
+
+    function initPlot() {
+        drawPlot();
+    }
+
+    function drawPlot() {
+        // Draw decision regions
+        const imgData = pCtx.createImageData(PLOT_SIZE, PLOT_SIZE);
+        for (let py = 0; py < PLOT_SIZE; py++) {
+            for (let px = 0; px < PLOT_SIZE; px++) {
+                const x = px / PLOT_SIZE;
+                const y = 1 - py / PLOT_SIZE;
+                const z = x * plotW1 + y * plotW2 + plotBias;
+                const s = sigmoid(z);
+                const idx = (py * PLOT_SIZE + px) * 4;
+
+                if (s >= 0.5) {
+                    // Yes region — green
+                    const intensity = 0.08 + (s - 0.5) * 0.3;
+                    imgData.data[idx] = Math.floor(30 * intensity * 3);
+                    imgData.data[idx + 1] = Math.floor(120 + 80 * intensity);
+                    imgData.data[idx + 2] = Math.floor(30 * intensity * 3);
+                } else {
+                    // No region — red
+                    const intensity = 0.08 + (0.5 - s) * 0.3;
+                    imgData.data[idx] = Math.floor(120 + 80 * intensity);
+                    imgData.data[idx + 1] = Math.floor(30 * intensity * 3);
+                    imgData.data[idx + 2] = Math.floor(30 * intensity * 3);
+                }
+                imgData.data[idx + 3] = 255;
+            }
+        }
+        pCtx.putImageData(imgData, 0, 0);
+
+        // Draw grid
+        pCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+        pCtx.lineWidth = 1;
+        for (let i = 0; i <= 10; i++) {
+            const p = (i / 10) * PLOT_SIZE;
+            pCtx.beginPath(); pCtx.moveTo(p, 0); pCtx.lineTo(p, PLOT_SIZE); pCtx.stroke();
+            pCtx.beginPath(); pCtx.moveTo(0, p); pCtx.lineTo(PLOT_SIZE, p); pCtx.stroke();
+        }
+
+        // Axis labels
+        pCtx.fillStyle = 'rgba(255,255,255,0.3)';
+        pCtx.font = '10px monospace';
+        pCtx.textAlign = 'center';
+        for (let i = 0; i <= 10; i += 2) {
+            pCtx.fillText((i / 10).toFixed(1), (i / 10) * PLOT_SIZE, PLOT_SIZE - 4);
+            pCtx.fillText((i / 10).toFixed(1), 20, PLOT_SIZE - (i / 10) * PLOT_SIZE + 4);
+        }
+
+        // Draw decision boundary line
+        // w1*x + w2*y + b = 0  =>  y = -(w1*x + b) / w2
+        if (Math.abs(plotW2) > 0.001) {
+            pCtx.beginPath();
+            const x0 = 0, x1 = 1;
+            const y0 = -(plotW1 * x0 + plotBias) / plotW2;
+            const y1_line = -(plotW1 * x1 + plotBias) / plotW2;
+            pCtx.moveTo(x0 * PLOT_SIZE, (1 - y0) * PLOT_SIZE);
+            pCtx.lineTo(x1 * PLOT_SIZE, (1 - y1_line) * PLOT_SIZE);
+            pCtx.strokeStyle = '#ffd54f';
+            pCtx.lineWidth = 3;
+            pCtx.stroke();
+
+            // Dashed boundary glow
+            pCtx.beginPath();
+            pCtx.moveTo(x0 * PLOT_SIZE, (1 - y0) * PLOT_SIZE);
+            pCtx.lineTo(x1 * PLOT_SIZE, (1 - y1_line) * PLOT_SIZE);
+            pCtx.strokeStyle = 'rgba(255, 213, 79, 0.3)';
+            pCtx.lineWidth = 8;
+            pCtx.stroke();
+        }
+
+        // Draw data points
+        for (let pt of dataPoints) {
+            const px = pt.x * PLOT_SIZE;
+            const py = (1 - pt.y) * PLOT_SIZE;
+
+            pCtx.beginPath();
+            pCtx.arc(px, py, 7, 0, Math.PI * 2);
+            pCtx.fillStyle = pt.label === 1 ? '#66bb6a' : '#ef5350';
+            pCtx.fill();
+            pCtx.strokeStyle = '#fff';
+            pCtx.lineWidth = 2;
+            pCtx.stroke();
+        }
+
+        // Update stats
+        document.getElementById('s-w1').textContent = plotW1.toFixed(3);
+        document.getElementById('s-w2').textContent = plotW2.toFixed(3);
+        document.getElementById('s-bias').textContent = plotBias.toFixed(3);
+        document.getElementById('s-step').textContent = plotStep;
+        document.getElementById('s-points').textContent = dataPoints.length;
+        document.getElementById('s-acc').textContent = getAccuracy();
+    }
+
+    // ===== SENSITIVITY VIEW =====
+    document.getElementById('go-sens-btn').addEventListener('click', () => {
+        document.getElementById('main-view').classList.remove('active');
+        document.getElementById('sens-view').classList.add('active');
+        drawSensitivity();
+    });
+    document.getElementById('sens-back-btn').addEventListener('click', () => {
+        document.getElementById('sens-view').classList.remove('active');
+        document.getElementById('main-view').classList.add('active');
+        updateMain();
+    });
+
+    const sensCanvas = document.getElementById('sens-canvas');
+    const sCtx = sensCanvas.getContext('2d');
+    const SENS_W = 560;
+    const SENS_H = 440;
+    sensCanvas.width = SENS_W;
+    sensCanvas.height = SENS_H;
+
+    const sensNames = ['HW/Exam', 'Health', 'Understand', 'Grade'];
+    const sensColors = ['#ff7043', '#66bb6a', '#42a5f5', '#ab47bc'];
+
+    function drawSensitivity() {
+        const vals = inputs.map(inp => parseFloat(document.getElementById(inp.slider).value));
+        const bias = parseFloat(document.getElementById('bias-slider').value);
+        const pad = { top: 30, right: 20, bottom: 50, left: 60 };
+        const plotW = SENS_W - pad.left - pad.right;
+        const plotH = SENS_H - pad.top - pad.bottom;
+
+        sCtx.clearRect(0, 0, SENS_W, SENS_H);
+
+        // Grid
+        sCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+        sCtx.lineWidth = 1;
+        for (let i = 0; i <= 10; i++) {
+            const x = pad.left + (i / 10) * plotW;
+            const y = pad.top + (i / 10) * plotH;
+            sCtx.beginPath(); sCtx.moveTo(x, pad.top); sCtx.lineTo(x, pad.top + plotH); sCtx.stroke();
+            sCtx.beginPath(); sCtx.moveTo(pad.left, y); sCtx.lineTo(pad.left + plotW, y); sCtx.stroke();
+        }
+
+        // Threshold line at 0.5
+        const threshY = pad.top + (1 - 0.5) * plotH;
+        sCtx.beginPath();
+        sCtx.setLineDash([6, 4]);
+        sCtx.moveTo(pad.left, threshY);
+        sCtx.lineTo(pad.left + plotW, threshY);
+        sCtx.strokeStyle = 'rgba(255, 213, 79, 0.5)';
+        sCtx.lineWidth = 2;
+        sCtx.stroke();
+        sCtx.setLineDash([]);
+
+        // Threshold label
+        sCtx.fillStyle = '#ffd54f';
+        sCtx.font = '11px monospace';
+        sCtx.textAlign = 'right';
+        sCtx.fillText('threshold', pad.left + plotW - 4, threshY - 6);
+
+        // Sensitivity data for bar chart
+        const sensitivities = [];
+
+        // Draw one curve per input
+        const steps = 100;
+        for (let i = 0; i < 4; i++) {
+            sCtx.beginPath();
+            sCtx.strokeStyle = sensColors[i];
+            sCtx.lineWidth = 2.5;
+
+            let minOut = 1, maxOut = 0;
+
+            for (let s = 0; s <= steps; s++) {
+                const t = s / steps;
+                const testVals = [...vals];
+                testVals[i] = t;
+                const sum = testVals.reduce((acc, v, j) => acc + v * inputs[j].w, 0);
+                const z = sum + bias;
+                const out = sigmoid(z);
+
+                if (out < minOut) minOut = out;
+                if (out > maxOut) maxOut = out;
+
+                const px = pad.left + t * plotW;
+                const py = pad.top + (1 - out) * plotH;
+                if (s === 0) sCtx.moveTo(px, py);
+                else sCtx.lineTo(px, py);
+            }
+            sCtx.stroke();
+
+            sensitivities.push({ index: i, delta: maxOut - minOut });
+
+            // Vertical marker at current slider value
+            const cx = pad.left + vals[i] * plotW;
+            const testVals = [...vals];
+            const sum = testVals.reduce((acc, v, j) => acc + v * inputs[j].w, 0);
+            const z = sum + bias;
+            const curOut = sigmoid(z);
+            const cy = pad.top + (1 - curOut) * plotH;
+
+            // Dashed vertical line
+            sCtx.beginPath();
+            sCtx.setLineDash([3, 3]);
+            sCtx.moveTo(cx, pad.top);
+            sCtx.lineTo(cx, pad.top + plotH);
+            sCtx.strokeStyle = sensColors[i] + '55';
+            sCtx.lineWidth = 1;
+            sCtx.stroke();
+            sCtx.setLineDash([]);
+
+            // Dot at current value
+            sCtx.beginPath();
+            sCtx.arc(cx, cy, 6, 0, Math.PI * 2);
+            sCtx.fillStyle = sensColors[i];
+            sCtx.fill();
+            sCtx.beginPath();
+            sCtx.arc(cx, cy, 3, 0, Math.PI * 2);
+            sCtx.fillStyle = '#fff';
+            sCtx.fill();
+        }
+
+        // Axis labels
+        sCtx.fillStyle = '#888';
+        sCtx.font = '12px sans-serif';
+        sCtx.textAlign = 'center';
+        sCtx.fillText('Input Value (0 → 1)', pad.left + plotW / 2, SENS_H - 10);
+
+        sCtx.save();
+        sCtx.translate(16, pad.top + plotH / 2);
+        sCtx.rotate(-Math.PI / 2);
+        sCtx.fillText('Sigmoid Output', 0, 0);
+        sCtx.restore();
+
+        // Axis tick labels
+        sCtx.fillStyle = 'rgba(255,255,255,0.35)';
+        sCtx.font = '10px monospace';
+        sCtx.textAlign = 'center';
+        for (let i = 0; i <= 10; i += 2) {
+            sCtx.fillText((i / 10).toFixed(1), pad.left + (i / 10) * plotW, pad.top + plotH + 16);
+        }
+        sCtx.textAlign = 'right';
+        for (let i = 0; i <= 10; i += 2) {
+            sCtx.fillText((i / 10).toFixed(1), pad.left - 8, pad.top + (1 - i / 10) * plotH + 4);
+        }
+
+        // Update bar chart
+        sensitivities.sort((a, b) => b.delta - a.delta);
+        const maxDelta = Math.max(...sensitivities.map(s => s.delta), 0.01);
+        const barsEl = document.getElementById('sens-bars');
+        barsEl.innerHTML = sensitivities.map(s => {
+            const pct = (s.delta / maxDelta * 100).toFixed(0);
+            const w = inputs[s.index].w;
+            return `<div class="bar-row">
+                <span class="bar-name" style="color:${sensColors[s.index]};">${sensNames[s.index]}</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:${pct}%; background:${sensColors[s.index]};"></div>
+                </div>
+                <span class="bar-value">${s.delta.toFixed(3)}</span>
+            </div>`;
+        }).join('');
+
+        // Update current values
+        const curEl = document.getElementById('sens-current');
+        curEl.innerHTML = inputs.map((inp, i) =>
+            `<span style="color:${sensColors[i]};">${sensNames[i]}</span>: ${vals[i].toFixed(2)} (w=${inp.w.toFixed(1)})`
+        ).join('<br>');
+    }
+
+    // Initial render
+    window.addEventListener('resize', updateMain);
+    updateMain();
+</script>
+</body>
+</html>
