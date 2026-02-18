@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGB Color Wheel — Color Theory Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>RGB Color Wheel</h1>
+        <p class="subtitle">Interactive Color Theory Tool</p>
+    </header>
+
+    <main>
+        <!-- Left Panel: Color Values -->
+        <section class="panel panel-left" aria-label="Color values">
+            <h2>Color Values</h2>
+
+            <div class="color-preview" id="colorPreview" aria-label="Current color preview"></div>
+
+            <div class="value-row" role="button" tabindex="0" id="copyRgb" aria-label="Copy RGB value">
+                <span class="value-label">RGB</span>
+                <span class="value-text" id="rgbValue">rgb(255, 0, 0)</span>
+                <span class="value-note">Used in screens and CSS</span>
+                <span class="copy-flash">Copied!</span>
+            </div>
+
+            <div class="value-row" role="button" tabindex="0" id="copyHex" aria-label="Copy HEX value">
+                <span class="value-label">HEX</span>
+                <span class="value-text" id="hexValue">#FF0000</span>
+                <span class="value-note">Shorthand used in web design</span>
+                <span class="copy-flash">Copied!</span>
+            </div>
+
+            <div class="value-row" role="button" tabindex="0" id="copyHsl" aria-label="Copy HSL value">
+                <span class="value-label">HSL</span>
+                <span class="value-text" id="hslValue">hsl(0°, 100%, 50%)</span>
+                <span class="value-note">Describes color as humans perceive it</span>
+                <span class="copy-flash">Copied!</span>
+            </div>
+
+            <div class="rgb-sliders">
+                <h3>RGB Channels</h3>
+                <div class="slider-row">
+                    <label for="rSlider">R</label>
+                    <input type="range" id="rSlider" min="0" max="255" value="255" class="channel-slider slider-r">
+                    <span class="slider-val" id="rVal">255</span>
+                </div>
+                <div class="slider-row">
+                    <label for="gSlider">G</label>
+                    <input type="range" id="gSlider" min="0" max="255" value="0" class="channel-slider slider-g">
+                    <span class="slider-val" id="gVal">0</span>
+                </div>
+                <div class="slider-row">
+                    <label for="bSlider">B</label>
+                    <input type="range" id="bSlider" min="0" max="255" value="0" class="channel-slider slider-b">
+                    <span class="slider-val" id="bVal">0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Center Panel: Color Wheel -->
+        <section class="panel panel-center" aria-label="Color wheel">
+            <div class="wheel-container">
+                <canvas id="wheelCanvas"></canvas>
+            </div>
+            <div class="lightness-control">
+                <label for="lightnessSlider">Lightness: <span id="lightnessVal">50</span>%</label>
+                <input type="range" id="lightnessSlider" min="0" max="100" value="50">
+                <p class="lightness-note">The wheel shows hue + saturation. This slider reveals the third dimension: lightness.</p>
+            </div>
+        </section>
+
+        <!-- Right Panel: Harmonies + Palette -->
+        <section class="panel panel-right" aria-label="Color harmonies and palette">
+            <h2>Color Harmonies</h2>
+            <div class="harmony-tabs" role="tablist">
+                <button class="harmony-tab active" data-mode="complementary" role="tab" aria-selected="true">Complementary</button>
+                <button class="harmony-tab" data-mode="analogous" role="tab" aria-selected="false">Analogous</button>
+                <button class="harmony-tab" data-mode="triadic" role="tab" aria-selected="false">Triadic</button>
+                <button class="harmony-tab" data-mode="split" role="tab" aria-selected="false">Split-Comp</button>
+                <button class="harmony-tab" data-mode="tetradic" role="tab" aria-selected="false">Tetradic</button>
+            </div>
+            <p class="harmony-desc" id="harmonyDesc">Two colors opposite each other — creates maximum contrast and visual tension.</p>
+            <div class="harmony-swatches" id="harmonySwatches"></div>
+
+            <div class="harmony-actions">
+                <button id="randomizeBtn" class="btn">Randomize</button>
+                <div class="cvd-select-wrapper">
+                    <select id="cvdMode" class="cvd-select" aria-label="Color blind simulation mode">
+                        <option value="normal">Normal Vision</option>
+                        <option value="protanopia">Protanopia (No Red)</option>
+                        <option value="deuteranopia">Deuteranopia (No Green)</option>
+                        <option value="tritanopia">Tritanopia (No Blue)</option>
+                    </select>
+                </div>
+            </div>
+
+            <h2>Saved Palette</h2>
+            <div class="palette-actions">
+                <button id="saveColor" class="btn">Save Color</button>
+                <button id="clearPalette" class="btn btn-secondary">Clear</button>
+            </div>
+            <div class="palette-grid" id="paletteGrid"></div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
