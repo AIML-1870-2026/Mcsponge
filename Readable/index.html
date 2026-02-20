@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Readable</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-bg: #111111;
+      --sidebar-width: 380px;
+      --accent-r: #e03030;
+      --accent-g: #30a040;
+      --accent-b: #3060e0;
+      --text-dim: #888;
+      --text-mid: #bbb;
+      --text-bright: #fff;
+      --border: #2a2a2a;
+      --section-gap: 2rem;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Space Mono', monospace;
+      background: #0a0a0a;
+      color: var(--text-bright);
+    }
+
+    /* ── OUTER SHELL ── */
+    .shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.6rem 1.4rem;
+      background: #0d0d0d;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      letter-spacing: 0.08em;
+      color: #fff;
+      line-height: 1;
+    }
+    header .tagline {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ── BODY ROW ── */
+    .body-row {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBARS ── */
+    aside {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding: 1.4rem 1.4rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: var(--section-gap);
+    }
+    aside.left  { border-right: 1px solid var(--border); }
+    aside.right { border-left:  1px solid var(--border); }
+
+    aside::-webkit-scrollbar { width: 4px; }
+    aside::-webkit-scrollbar-track { background: transparent; }
+    aside::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+    .section-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.4rem;
+      margin-bottom: 0.9rem;
+    }
+
+    /* ── COLOR BLOCK ── */
+    .color-block { display: flex; flex-direction: column; gap: 0.8rem; }
+
+    .swatch-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.3rem;
+    }
+    .swatch {
+      width: 54px;
+      height: 54px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      flex-shrink: 0;
+    }
+    .swatch-hex {
+      font-size: 1rem;
+      color: var(--text-mid);
+      letter-spacing: 0.06em;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .channel-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-r { background: var(--accent-r); }
+    .dot-g { background: var(--accent-g); }
+    .dot-b { background: var(--accent-b); }
+
+    input[type=range] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #2a2a2a;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #555;
+      cursor: pointer;
+    }
+    input[type=range].r-slider::-webkit-slider-thumb { border-color: var(--accent-r); }
+    input[type=range].g-slider::-webkit-slider-thumb { border-color: var(--accent-g); }
+    input[type=range].b-slider::-webkit-slider-thumb { border-color: var(--accent-b); }
+
+    input[type=number] {
+      width: 68px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: var(--text-bright);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.95rem;
+      padding: 0.35rem 0.45rem;
+      border-radius: 4px;
+      text-align: right;
+      -moz-appearance: textfield;
+    }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* ── SIZE SLIDER ── */
+    .size-block { display: flex; flex-direction: column; gap: 0.7rem; }
+    .size-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .size-row span {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .size-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      padding: 0 2px;
+    }
+
+    /* ── CONTRAST READOUT ── */
+    .contrast-block { display: flex; flex-direction: column; gap: 0.6rem; }
+    .ratio-row { display: flex; align-items: center; gap: 1.4rem; }
+    .ratio-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3.8rem;
+      letter-spacing: 0.04em;
+      color: #fff;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .ratio-display span { font-size: 2rem; color: var(--text-dim); }
+
+    /* ── WCAG INDICATORS ── */
+    .wcag-indicators { display: flex; flex-direction: column; gap: 0.5rem; }
+    .wcag-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.03em;
+    }
+    .wcag-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .wcag-dot.pass { background: #4caf50; box-shadow: 0 0 6px rgba(76,175,80,0.55); }
+    .wcag-dot.fail { background: #e57373; box-shadow: 0 0 6px rgba(229,115,115,0.55); }
+    .wcag-pill-label { color: var(--text-dim); }
+    .wcag-pill-status { font-weight: 700; }
+    .wcag-pill-status.pass { color: #4caf50; }
+    .wcag-pill-status.fail { color: #e57373; }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .badge {
+      font-size: 0.8rem;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.05em;
+      padding: 0.35rem 0.7rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .badge.pass { background: #1a3a1a; color: #4caf50; border: 1px solid #2a5a2a; }
+    .badge.fail { background: #3a1a1a; color: #e57373; border: 1px solid #5a2a2a; }
+
+    /* ── LUMINANCE READOUT ── */
+    .lum-block { display: flex; gap: 1.5rem; }
+    .lum-item { flex: 1; }
+    .lum-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+    .lum-value { font-size: 1.5rem; color: var(--text-mid); letter-spacing: 0.04em; }
+
+    /* ── PRESETS ── */
+    .preset-block { display: flex; flex-direction: column; gap: 0.6rem; }
+    .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .preset-btn {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: var(--text-mid);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      padding: 0.65rem 0.7rem;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .preset-btn:hover { border-color: #666; color: #fff; }
+    .preset-btn.active { border-color: #fff; color: #fff; }
+    .preset-swatch {
+      display: flex;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .preset-swatch i {
+      display: block;
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+    }
+
+    /* ── VISION TOGGLES ── */
+    .vision-block { display: flex; flex-direction: column; gap: 0.6rem; }
+    .vision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .vision-btn {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: var(--text-dim);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.03em;
+      padding: 0.65rem 0.5rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      text-align: center;
+    }
+    .vision-btn:hover { border-color: #555; color: var(--text-mid); }
+    .vision-btn.active { border-color: #fff; color: #fff; background: #2a2a2a; }
+
+    /* ── MAIN PREVIEW ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #preview {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 3rem;
+      overflow-y: auto;
+      transition: filter 0.2s;
+    }
+
+    #preview-text {
+      line-height: 1.65;
+      max-width: 70ch;
+    }
+
+    /* ── BOTTOM STATS BAR ── */
+    .stats-bar {
+      display: flex;
+      gap: 0;
+      border-top: 1px solid var(--border);
+      background: var(--sidebar-bg);
+      flex-shrink: 0;
+    }
+
+    .stats-panel {
+      flex: 1;
+      padding: 1.2rem 1.8rem;
+    }
+    .stats-panel + .stats-panel {
+      border-left: 1px solid var(--border);
+    }
+
+    /* contrast ratio inside stats bar */
+    .stats-bar .contrast-block { gap: 0.5rem; }
+    .stats-bar .ratio-display { font-size: 3rem; }
+    .stats-bar .badges { gap: 0.4rem; }
+
+    /* luminance inside stats bar */
+    .stats-bar .lum-block { gap: 2rem; }
+    .stats-bar .lum-value { font-size: 1.8rem; }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- HEADER -->
+  <header>
+    <h1>Readable</h1>
+    <span class="tagline">Color &amp; contrast explorer</span>
+  </header>
+
+  <div class="body-row">
+
+    <!-- LEFT SIDEBAR: color + size controls -->
+    <aside class="left">
+
+      <!-- BACKGROUND COLOR -->
+      <div>
+        <div class="section-label">Background Color</div>
+        <div class="color-block">
+          <div class="swatch-row">
+            <div class="swatch" id="bg-swatch"></div>
+            <span class="swatch-hex" id="bg-hex">#FFFFFF</span>
+          </div>
+          <div class="slider-row">
+            <span class="channel-dot dot-r"></span>
+            <input type="range" class="r-slider" id="bg-r" min="0" max="255" value="255">
+            <input type="number" id="bg-r-n" min="0" max="255" value="255">
+          </div>
+          <div class="slider-row">
+            <span class="channel-dot dot-g"></span>
+            <input type="range" class="g-slider" id="bg-g" min="0" max="255" value="255">
+            <input type="number" id="bg-g-n" min="0" max="255" value="255">
+          </div>
+          <div class="slider-row">
+            <span class="channel-dot dot-b"></span>
+            <input type="range" class="b-slider" id="bg-b" min="0" max="255" value="255">
+            <input type="number" id="bg-b-n" min="0" max="255" value="255">
+          </div>
+        </div>
+      </div>
+
+      <!-- TEXT COLOR -->
+      <div>
+        <div class="section-label">Text Color</div>
+        <div class="color-block">
+          <div class="swatch-row">
+            <div class="swatch" id="tx-swatch"></div>
+            <span class="swatch-hex" id="tx-hex">#000000</span>
+          </div>
+          <div class="slider-row">
+            <span class="channel-dot dot-r"></span>
+            <input type="range" class="r-slider" id="tx-r" min="0" max="255" value="0">
+            <input type="number" id="tx-r-n" min="0" max="255" value="0">
+          </div>
+          <div class="slider-row">
+            <span class="channel-dot dot-g"></span>
+            <input type="range" class="g-slider" id="tx-g" min="0" max="255" value="0">
+            <input type="number" id="tx-g-n" min="0" max="255" value="0">
+          </div>
+          <div class="slider-row">
+            <span class="channel-dot dot-b"></span>
+            <input type="range" class="b-slider" id="tx-b" min="0" max="255" value="0">
+            <input type="number" id="tx-b-n" min="0" max="255" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- TEXT SIZE -->
+      <div>
+        <div class="section-label">Text Size</div>
+        <div class="size-block">
+          <div class="size-row">
+            <input type="range" id="size-slider" min="10" max="72" value="18" style="flex:1">
+            <input type="number" id="size-n" min="10" max="72" value="18" style="width:52px">
+            <span>px</span>
+          </div>
+          <div class="size-labels">
+            <span>caption</span>
+            <span>body</span>
+            <span>heading</span>
+            <span>display</span>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- CENTER: preview + bottom stats bar -->
+    <main>
+      <div id="preview">
+        <div id="preview-text">
+          <p>Sekiro's difficulty is almost entirely regulated by your willingness to dig deep and learn the delicate balance between aggression and defense that defines combat. FromSoft's typical adherence to staunch fairness means every death (or two) is a learning opportunity, culminating in a massively gratifying sense of mastery that turns each encounter into a balletic performance.</p>
+          <br>
+          <p>The learning experience is well-guided, with the wonderful boss fights serving as tutorials for every aspect of combat. One of the first major fights, the mounted general Gyoubu the Demon chasing you down in a huge field of corpses, mixed devastating unblockables into his barrage of bladed spear swings whilst galloping around a huge arena.</p>
+        </div>
+      </div>
+
+      <!-- BOTTOM STATS BAR -->
+      <div class="stats-bar">
+        <div class="stats-panel">
+          <div class="section-label">Contrast Ratio</div>
+          <div class="contrast-block">
+            <div class="ratio-row">
+              <div class="ratio-display" id="ratio-display">21.00<span>:1</span></div>
+              <div class="wcag-indicators" id="wcag-indicators"></div>
+            </div>
+            <div class="badges" id="badges"></div>
+          </div>
+        </div>
+        <div class="stats-panel">
+          <div class="section-label">Relative Luminance</div>
+          <div class="lum-block">
+            <div class="lum-item">
+              <div class="lum-label">Background</div>
+              <div class="lum-value" id="bg-lum">1.000</div>
+            </div>
+            <div class="lum-item">
+              <div class="lum-label">Text</div>
+              <div class="lum-value" id="tx-lum">0.000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR: presets + vision -->
+    <aside class="right">
+
+      <!-- PRESETS -->
+      <div>
+        <div class="section-label">Presets</div>
+        <div class="preset-block">
+          <div class="preset-grid" id="preset-grid"></div>
+        </div>
+      </div>
+
+      <!-- VISION TYPES -->
+      <div>
+        <div class="section-label">Vision Simulation</div>
+        <div class="vision-block">
+          <div class="vision-grid" id="vision-grid"></div>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+</div>
+
+<script>
+  // ── STATE ──
+  const state = {
+    bg: { r: 255, g: 255, b: 255 },
+    tx: { r: 0, g: 0, b: 0 },
+    size: 18,
+    vision: 'normal'
+  };
+
+  // ── PRESETS ──
+  const presets = [
+    { name: 'Classic',   bg: [255,255,255], tx: [0,0,0] },
+    { name: 'Dark Mode', bg: [18,18,18],    tx: [224,224,224] },
+    { name: 'Neon',      bg: [10,10,30],    tx: [0,255,180] },
+    { name: 'Earthy',    bg: [242,236,220], tx: [74,50,28] },
+    { name: 'Pastel',    bg: [255,240,245], tx: [100,60,120] },
+    { name: 'Terminal',  bg: [0,20,0],      tx: [0,230,80] },
+  ];
+
+  // ── VISION FILTERS ──
+  const visions = [
+    { id: 'normal',       label: 'Normal',        filter: 'none' },
+    { id: 'deuteranopia', label: 'Deuteranopia',  filter: 'url(#deuteranopia)' },
+    { id: 'protanopia',   label: 'Protanopia',    filter: 'url(#protanopia)' },
+    { id: 'tritanopia',   label: 'Tritanopia',    filter: 'url(#tritanopia)' },
+    { id: 'achromatopsia',label: 'Achromatopsia', filter: 'grayscale(100%)' },
+    { id: 'monochromacy', label: 'Monochromacy',  filter: 'url(#monochromacy)' },
+  ];
+
+  // ── SVG FILTERS for CVD simulation ──
+  const svgFilters = `
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0">
+    <defs>
+      <filter id="deuteranopia" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="
+          0.625 0.375 0     0 0
+          0.7   0.3   0     0 0
+          0     0.3   0.7   0 0
+          0     0     0     1 0"/>
+      </filter>
+      <filter id="protanopia" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="
+          0.567 0.433 0     0 0
+          0.558 0.442 0     0 0
+          0     0.242 0.758 0 0
+          0     0     0     1 0"/>
+      </filter>
+      <filter id="tritanopia" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="
+          0.95  0.05  0     0 0
+          0     0.433 0.567 0 0
+          0     0.475 0.525 0 0
+          0     0     0     1 0"/>
+      </filter>
+      <filter id="monochromacy" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="
+          0.098 0.098 0.804 0 0
+          0.098 0.098 0.804 0 0
+          0.098 0.098 0.804 0 0
+          0     0     0     1 0"/>
+      </filter>
+    </defs>
+  </svg>`;
+  document.body.insertAdjacentHTML('afterbegin', svgFilters);
+
+  // ── DOM REFS ──
+  const els = {
+    bgR: document.getElementById('bg-r'), bgRn: document.getElementById('bg-r-n'),
+    bgG: document.getElementById('bg-g'), bgGn: document.getElementById('bg-g-n'),
+    bgB: document.getElementById('bg-b'), bgBn: document.getElementById('bg-b-n'),
+    txR: document.getElementById('tx-r'), txRn: document.getElementById('tx-r-n'),
+    txG: document.getElementById('tx-g'), txGn: document.getElementById('tx-g-n'),
+    txB: document.getElementById('tx-b'), txBn: document.getElementById('tx-b-n'),
+    sizeSl: document.getElementById('size-slider'), sizeN: document.getElementById('size-n'),
+    bgSwatch: document.getElementById('bg-swatch'), bgHex: document.getElementById('bg-hex'),
+    txSwatch: document.getElementById('tx-swatch'), txHex: document.getElementById('tx-hex'),
+    ratioDisplay: document.getElementById('ratio-display'),
+    wcagIndicators: document.getElementById('wcag-indicators'),
+    badges: document.getElementById('badges'),
+    bgLum: document.getElementById('bg-lum'), txLum: document.getElementById('tx-lum'),
+    presetGrid: document.getElementById('preset-grid'),
+    visionGrid: document.getElementById('vision-grid'),
+    preview: document.getElementById('preview'),
+    previewText: document.getElementById('preview-text'),
+  };
+
+  // ── WCAG LUMINANCE ──
+  function linearize(c) {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  }
+  function luminance(r, g, b) {
+    return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+  }
+  function contrastRatio(l1, l2) {
+    const lighter = Math.max(l1, l2), darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  // ── HEX HELPER ──
+  function toHex(r, g, b) {
+    return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0').toUpperCase()).join('');
+  }
+
+  // ── RENDER ──
+  function render() {
+    const { bg, tx, size } = state;
+
+    // swatches & hex
+    const bgCss = `rgb(${bg.r},${bg.g},${bg.b})`;
+    const txCss = `rgb(${tx.r},${tx.g},${tx.b})`;
+    els.bgSwatch.style.background = bgCss;
+    els.txSwatch.style.background = txCss;
+    els.bgHex.textContent = toHex(bg.r, bg.g, bg.b);
+    els.txHex.textContent = toHex(tx.r, tx.g, tx.b);
+
+    // preview
+    els.preview.style.background = bgCss;
+    els.previewText.style.color = txCss;
+    els.previewText.style.fontSize = size + 'px';
+
+    // luminance
+    const Lbg = luminance(bg.r, bg.g, bg.b);
+    const Ltx = luminance(tx.r, tx.g, tx.b);
+    els.bgLum.textContent = Lbg.toFixed(3);
+    els.txLum.textContent = Ltx.toFixed(3);
+
+    // contrast ratio
+    const cr = contrastRatio(Lbg, Ltx);
+    els.ratioDisplay.innerHTML = cr.toFixed(2) + '<span>:1</span>';
+
+    // wcag indicators
+    els.wcagIndicators.innerHTML = [
+      { label: 'Normal text', pass: cr >= 4.5, threshold: '4.5:1' },
+      { label: 'Large text',  pass: cr >= 3.0, threshold: '3.0:1' },
+    ].map(i => `
+      <div class="wcag-pill">
+        <span class="wcag-dot ${i.pass ? 'pass' : 'fail'}"></span>
+        <span class="wcag-pill-label">${i.label}</span>
+        <span class="wcag-pill-status ${i.pass ? 'pass' : 'fail'}">${i.pass ? 'PASS' : 'FAIL'}</span>
+      </div>`).join('');
+
+    // badges
+    const isLarge = size >= 18; // 18px bold or 24px normal — simplified: >= 18px
+    const badges = [
+      { label: 'AA Normal',  pass: cr >= 4.5 },
+      { label: 'AA Large',   pass: cr >= 3.0 },
+      { label: 'AAA Normal', pass: cr >= 7.0 },
+      { label: 'AAA Large',  pass: cr >= 4.5 },
+    ];
+    els.badges.innerHTML = badges.map(b =>
+      `<span class="badge ${b.pass ? 'pass' : 'fail'}">${b.pass ? '✓' : '✗'} ${b.label}</span>`
+    ).join('');
+
+    // vision filter
+    const vf = visions.find(v => v.id === state.vision);
+    els.preview.style.filter = vf ? vf.filter : 'none';
+  }
+
+  // ── SYNC SLIDER ↔ NUMBER ──
+  function syncPair(slider, number, onChange) {
+    slider.addEventListener('input', () => {
+      number.value = slider.value;
+      onChange(parseInt(slider.value));
+    });
+    number.addEventListener('input', () => {
+      let v = Math.min(255, Math.max(0, parseInt(number.value) || 0));
+      number.value = v;
+      slider.value = v;
+      onChange(v);
+    });
+  }
+
+  syncPair(els.bgR, els.bgRn, v => { state.bg.r = v; render(); });
+  syncPair(els.bgG, els.bgGn, v => { state.bg.g = v; render(); });
+  syncPair(els.bgB, els.bgBn, v => { state.bg.b = v; render(); });
+  syncPair(els.txR, els.txRn, v => { state.tx.r = v; render(); });
+  syncPair(els.txG, els.txGn, v => { state.tx.g = v; render(); });
+  syncPair(els.txB, els.txBn, v => { state.tx.b = v; render(); });
+
+  // size
+  els.sizeSl.addEventListener('input', () => {
+    els.sizeN.value = els.sizeSl.value;
+    state.size = parseInt(els.sizeSl.value);
+    render();
+  });
+  els.sizeN.addEventListener('input', () => {
+    let v = Math.min(72, Math.max(10, parseInt(els.sizeN.value) || 10));
+    els.sizeN.value = v;
+    els.sizeSl.value = v;
+    state.size = v;
+    render();
+  });
+
+  // ── BUILD PRESETS ──
+  presets.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.dataset.index = i;
+    btn.innerHTML = `
+      <span class="preset-swatch">
+        <i style="background:rgb(${p.bg.join(',')})"></i>
+        <i style="background:rgb(${p.tx.join(',')})"></i>
+      </span>
+      ${p.name}`;
+    btn.addEventListener('click', () => {
+      [state.bg.r, state.bg.g, state.bg.b] = p.bg;
+      [state.tx.r, state.tx.g, state.tx.b] = p.tx;
+      syncAllInputs();
+      render();
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+    els.presetGrid.appendChild(btn);
+  });
+
+  // ── BUILD VISION BUTTONS ──
+  visions.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'vision-btn' + (v.id === 'normal' ? ' active' : '');
+    btn.textContent = v.label;
+    btn.addEventListener('click', () => {
+      state.vision = v.id;
+      document.querySelectorAll('.vision-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+    els.visionGrid.appendChild(btn);
+  });
+
+  // ── SYNC ALL INPUTS FROM STATE ──
+  function syncAllInputs() {
+    els.bgR.value = els.bgRn.value = state.bg.r;
+    els.bgG.value = els.bgGn.value = state.bg.g;
+    els.bgB.value = els.bgBn.value = state.bg.b;
+    els.txR.value = els.txRn.value = state.tx.r;
+    els.txG.value = els.txGn.value = state.tx.g;
+    els.txB.value = els.txBn.value = state.tx.b;
+  }
+
+  // ── INIT ──
+  syncAllInputs();
+  render();
+</script>
+</body>
+</html>
