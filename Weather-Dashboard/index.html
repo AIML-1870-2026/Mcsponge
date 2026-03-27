@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Weather Dashboard — real-time weather, forecasts, air quality, and more for any city.">
+  <title>Weather Dashboard</title>
+  <!-- Emoji favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛅</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── Splash Screen ── -->
+  <div id="splash">
+    <div class="splash-inner">
+      <div class="splash-icon">⛅</div>
+      <h1 class="splash-title">Weather Dashboard</h1>
+      <p class="splash-sub">Search any city to get started</p>
+      <div class="splash-search">
+        <div class="search-input-wrap">
+          <input type="text" id="splashInput" placeholder="Enter a city..." autocomplete="off" />
+          <ul id="splashSuggestions" class="suggestions hidden"></ul>
+        </div>
+        <button id="splashSearchBtn">Search</button>
+        <button id="splashGeoBtn" title="Use my location">📍</button>
+      </div>
+      <div id="splashError" class="error-msg hidden"></div>
+    </div>
+  </div>
+
+  <!-- ── App Header ── -->
+  <header id="appHeader" class="hidden">
+    <div class="brand">⛅ Weather Dashboard</div>
+    <div class="search-wrapper">
+      <div class="search-input-wrap">
+        <input type="text" id="cityInput" placeholder="Search city..." autocomplete="off" />
+        <ul id="suggestions" class="suggestions hidden"></ul>
+      </div>
+      <button id="searchBtn">Search</button>
+      <button id="geoBtn" title="Use my location">📍</button>
+    </div>
+    <button id="themeToggle" title="Toggle theme">🌙</button>
+  </header>
+
+  <!-- ── Main ── -->
+  <main id="appMain" class="hidden">
+    <div id="loadingOverlay" class="loading-overlay hidden">
+      <div class="spinner"></div>
+    </div>
+    <div id="errorMsg" class="error-msg hidden"></div>
+
+    <!-- Alerts: full width, conditionally shown -->
+    <section id="alertsSection" class="hidden">
+      <div id="alertsList" class="alerts-list"></div>
+    </section>
+
+    <!-- Two-column dashboard -->
+    <div id="dashboard" class="dashboard hidden">
+
+      <!-- Left column -->
+      <div class="col-left">
+
+        <!-- Current Conditions -->
+        <section id="currentSection">
+          <div class="current-card">
+            <div class="current-left">
+              <div class="current-city" id="currentCity"></div>
+              <div class="current-date" id="currentDate"></div>
+              <img id="currentIcon" src="" alt="weather icon" />
+              <div class="current-desc" id="currentDesc"></div>
+            </div>
+            <div class="current-right">
+              <div class="temp-row">
+                <span class="current-temp" id="currentTemp"></span>
+                <div class="unit-toggle">
+                  <button id="btnF" class="unit-btn active">°F</button>
+                  <button id="btnC" class="unit-btn">°C</button>
+                </div>
+              </div>
+              <div class="current-stats">
+                <div class="stat">
+                  <span class="stat-label">Feels Like</span>
+                  <span class="stat-val" id="feelsLike"></span>
+                  <span class="stat-note" id="feelsLikeNote"></span>
+                </div>
+                <div class="stat"><span class="stat-label">Humidity</span><span class="stat-val" id="humidity"></span></div>
+                <div class="stat"><span class="stat-label">Wind</span><span class="stat-val" id="wind"></span></div>
+                <div class="stat"><span class="stat-label">Pressure</span><span class="stat-val" id="pressure"></span></div>
+                <div class="stat"><span class="stat-label">Visibility</span><span class="stat-val" id="visibility"></span></div>
+                <div class="stat"><span class="stat-label">Sunrise</span><span class="stat-val" id="sunrise"></span></div>
+                <div class="stat"><span class="stat-label">Sunset</span><span class="stat-val" id="sunset"></span></div>
+                <div class="stat"><span class="stat-label">Moon</span><span class="stat-val" id="moonPhase"></span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Hourly Forecast -->
+        <section id="hourlySection">
+          <h2>Hourly Forecast</h2>
+          <div class="hourly-strip" id="hourlyStrip"></div>
+        </section>
+
+        <!-- Temperature Trend Chart -->
+        <section id="chartSection">
+          <h2>48-Hour Temperature Trend</h2>
+          <div class="chart-wrap">
+            <canvas id="tempChart"></canvas>
+          </div>
+        </section>
+
+        <!-- Air Quality -->
+        <section id="aqiSection">
+          <h2>Air Quality</h2>
+          <div class="aqi-card" id="aqiCard"></div>
+        </section>
+
+      </div><!-- /col-left -->
+
+      <!-- Right column -->
+      <div class="col-right">
+
+        <!-- Best Time Outside -->
+        <section id="bestTimeSection">
+          <h2>Best Time Outside</h2>
+          <div class="best-time-card" id="bestTimeCard"></div>
+        </section>
+
+        <!-- 7-Day Forecast -->
+        <section id="forecastSection">
+          <h2>7-Day Forecast</h2>
+          <div class="forecast-grid" id="forecastGrid"></div>
+        </section>
+
+        <!-- Precipitation Chart -->
+        <section id="precipSection">
+          <h2>Precipitation (24h)</h2>
+          <div class="chart-wrap">
+            <canvas id="precipChart"></canvas>
+          </div>
+        </section>
+
+      </div><!-- /col-right -->
+
+    </div><!-- /dashboard -->
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
