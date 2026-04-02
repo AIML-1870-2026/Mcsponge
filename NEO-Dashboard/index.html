@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NASA Planetary Defense Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="1.8">
+      <circle cx="12" cy="12" r="10"/>
+      <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-30 12 12)"/>
+      <circle cx="12" cy="12" r="2" fill="#00d4ff"/>
+    </svg>
+    <span>NASA PLANETARY DEFENSE DASHBOARD</span>
+  </div>
+  <nav>
+    <button class="tab-btn active" id="tab-btn-globe">&#9679; Globe</button>
+    <button class="tab-btn" id="tab-btn-neows">This Week</button>
+    <button class="tab-btn" id="tab-btn-sbdb">Approaches</button>
+    <button class="tab-btn" id="tab-btn-sentry">Impact Risk</button>
+  </nav>
+</header>
+
+<main>
+  <!-- Globe Tab -->
+  <div class="tab-panel" id="tab-globe">
+    <div id="globe-container"></div>
+    <div id="globe-status">
+      <div class="skeleton-wrap" style="width:200px">
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+      </div>
+    </div>
+    <div id="globe-legend"></div>
+  </div>
+
+  <!-- NeoWs Tab -->
+  <div class="tab-panel hidden" id="tab-neows"></div>
+
+  <!-- SBDB Tab -->
+  <div class="tab-panel hidden" id="tab-sbdb"></div>
+
+  <!-- Sentry Tab -->
+  <div class="tab-panel hidden" id="tab-sentry"></div>
+</main>
+
+<!-- Three.js must load before globe.gl so THREE is globally available -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/globe.gl/dist/globe.gl.min.js"></script>
+
+<!-- App scripts (load order matters) -->
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script src="globe/globe.js"></script>
+<script src="tabs/neows.js"></script>
+<script src="tabs/sbdb.js"></script>
+<script src="tabs/sentry.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
