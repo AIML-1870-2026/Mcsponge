@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drug Safety Explorer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --surface2:  #21262d;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --accent:    #58a6ff;
+      --accent2:   #3fb950;
+      --warn:      #d29922;
+      --danger:    #f85149;
+      --orange:    #fb8500;
+      --yellow:    #ffd60a;
+      --radius:    8px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ─── Disclaimer Banner — sticky ─── */
+    #disclaimer-banner {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: linear-gradient(90deg, #1a1000, #1a0800);
+      border-bottom: 1px solid #5a3a00;
+      padding: 10px 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #e3b341;
+    }
+    #disclaimer-banner strong { color: #ffa657; }
+
+    /* ─── Header ─── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #1f6feb, #0d419d);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    header h1 { font-size: 20px; font-weight: 700; color: var(--text); }
+    header p  { font-size: 13px; color: var(--muted); margin-top: 1px; }
+    #help-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    #help-btn:hover { background: var(--border); }
+
+    /* ─── Main Layout ─── */
+    main { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+    /* ─── Input Section ─── */
+    .input-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .input-section h2 {
+      font-size: 13px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+    .input-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+    .drug-input-group { flex: 1; min-width: 200px; }
+    .drug-input-group label {
+      display: block;
+      font-size: 13px; font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .drug-input-group label span { color: var(--accent); }
+    .drug-input-group.b label span { color: #bc8cff; }
+    .drug-select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+      transition: border-color 0.2s;
+    }
+    .drug-select:focus { border-color: var(--accent); }
+    .drug-input-group.b .drug-select:focus { border-color: #bc8cff; }
+    .vs-badge {
+      font-size: 13px; font-weight: 700;
+      color: var(--muted); padding: 0 4px;
+      align-self: center; flex-shrink: 0;
+    }
+    #compare-btn {
+      background: linear-gradient(135deg, #1f6feb, #0d419d);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px 28px;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #compare-btn:hover { opacity: 0.9; }
+    #compare-btn:active { transform: scale(0.97); }
+    #compare-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ─── Tabs ─── */
+    .tabs-bar {
+      display: flex; gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      background: none; border: none;
+      color: var(--muted);
+      padding: 10px 18px;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ─── Results Grid ─── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 760px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .drug-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .drug-col-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 8px;
+    }
+    .drug-col-header.a {
+      background: linear-gradient(90deg, rgba(31,111,235,0.15), transparent);
+      border-top: 3px solid var(--accent);
+    }
+    .drug-col-header.b {
+      background: linear-gradient(90deg, rgba(188,140,255,0.12), transparent);
+      border-top: 3px solid #bc8cff;
+    }
+    .drug-col-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .drug-col-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .drug-col-body { padding: 16px; }
+
+    /* ─── Tab section header ─── */
+    .tab-section-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab-section-header h3 { font-size: 15px; font-weight: 600; color: var(--text); }
+    .section-divider {
+      margin: 28px 0 20px;
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+    .section-label {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ─── Info Button ─── */
+    .info-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      font-size: 12px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+    .info-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ─── Empty / Placeholder ─── */
+    .empty-state {
+      text-align: center; padding: 40px 20px;
+      color: var(--muted); font-size: 14px;
+    }
+    .empty-state .icon { font-size: 32px; margin-bottom: 10px; }
+    .empty-state p { max-width: 260px; margin: 0 auto; }
+
+    /* ─── Spinner ─── */
+    .spinner-wrap { text-align: center; padding: 40px 0; }
+    .spinner {
+      display: inline-block;
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Interaction text ─── */
+    .interaction-text {
+      font-size: 13px; color: var(--text);
+      line-height: 1.7;
+      max-height: 380px; overflow-y: auto;
+      padding-right: 4px; white-space: pre-wrap;
+    }
+    .interaction-text::-webkit-scrollbar { width: 5px; }
+    .interaction-text::-webkit-scrollbar-track { background: var(--surface2); }
+    .interaction-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── Warnings blocks ─── */
+    .warning-block {
+      margin-bottom: 14px;
+      border-left: 3px solid var(--warn);
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+      background: rgba(210,153,34,0.06);
+    }
+    .warning-block.boxed {
+      border-left-color: var(--danger);
+      background: rgba(248,81,73,0.07);
+    }
+    .warning-block-label {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--warn);
+      margin-bottom: 6px;
+    }
+    .warning-block.boxed .warning-block-label { color: #ff7b72; }
+    .warning-text {
+      font-size: 13px; color: var(--text);
+      line-height: 1.7;
+      max-height: 280px; overflow-y: auto;
+      white-space: pre-wrap;
+      padding-right: 4px;
+    }
+    .warning-text::-webkit-scrollbar { width: 5px; }
+    .warning-text::-webkit-scrollbar-track { background: var(--surface2); }
+    .warning-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── Chart ─── */
+    .chart-wrap { position: relative; height: 280px; }
+    .faers-note {
+      margin-top: 10px; font-size: 12px; color: var(--muted);
+      background: var(--surface2);
+      border-left: 3px solid var(--warn);
+      padding: 8px 12px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ─── Shared reactions ─── */
+    .shared-badge {
+      background: var(--orange); color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 3px 9px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+    .shared-section, .coadmin-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .shared-section .section-note {
+      font-size: 13px; color: var(--muted);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .shared-row, .coadmin-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .shared-row:last-child, .coadmin-row:last-child { border-bottom: none; }
+    .shared-row-name, .coadmin-row-name { font-size: 14px; color: var(--text); }
+    .shared-counts { display: flex; gap: 8px; }
+    .count-pill {
+      font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: 12px;
+      min-width: 64px; text-align: center;
+    }
+    .count-pill.a { background: rgba(88,166,255,0.18);  color: var(--accent); }
+    .count-pill.b { background: rgba(188,140,255,0.18); color: #bc8cff; }
+
+    /* ─── Co-admin ─── */
+    .coadmin-label { font-size: 14px; color: var(--muted); margin-bottom: 2px; }
+    .coadmin-total { font-size: 42px; font-weight: 700; color: var(--danger); line-height: 1.1; }
+    .coadmin-unit  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .coadmin-subtitle { font-size: 13px; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+    .coadmin-count-pill {
+      background: rgba(248,81,73,0.15); color: #ff7b72;
+      font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: 12px;
+      min-width: 36px; text-align: center;
+    }
+
+    /* ─── Data Graphs tab ─── */
+    .graph-full-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .graph-trend-wrap { position: relative; height: 320px; }
+    .donut-wrap       { position: relative; height: 230px; }
+
+    /* ─── Recall Cards ─── */
+    .recall-card {
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      margin-bottom: 10px;
+      overflow: hidden; display: flex;
+    }
+    .recall-card .recall-bar { width: 5px; flex-shrink: 0; }
+    .recall-card.class-i   .recall-bar { background: var(--danger); }
+    .recall-card.class-ii  .recall-bar { background: var(--orange); }
+    .recall-card.class-iii .recall-bar { background: var(--yellow); }
+    .recall-card .recall-body { padding: 10px 12px; flex: 1; min-width: 0; }
+    .recall-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+    .recall-class-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 2px 7px; border-radius: 10px;
+      text-transform: uppercase;
+    }
+    .class-i   .recall-class-badge { background: rgba(248,81,73,0.18);  color: #ff7b72; }
+    .class-ii  .recall-class-badge { background: rgba(251,133,0,0.18);  color: #ffa657; }
+    .class-iii .recall-class-badge { background: rgba(255,214,10,0.15); color: #e3b341; }
+    .recall-date    { font-size: 12px; color: var(--muted); }
+    .recall-product { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .recall-reason  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .recall-list { max-height: 420px; overflow-y: auto; padding-right: 2px; }
+    .recall-list::-webkit-scrollbar { width: 5px; }
+    .recall-list::-webkit-scrollbar-track { background: var(--surface2); }
+    .recall-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── Error state ─── */
+    .error-state {
+      background: rgba(248,81,73,0.1);
+      border: 1px solid rgba(248,81,73,0.3);
+      border-radius: var(--radius);
+      padding: 16px; font-size: 13px;
+      color: #ff7b72; text-align: center;
+    }
+    .retry-btn {
+      margin-top: 10px; background: none;
+      border: 1px solid #ff7b72; color: #ff7b72;
+      border-radius: 6px; padding: 6px 16px;
+      font-size: 13px; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .retry-btn:hover { background: rgba(248,81,73,0.15); }
+
+    /* ─── Attribution ─── */
+    #attribution {
+      margin-top: 40px; padding: 16px 20px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 12px; color: var(--muted);
+      text-align: center; line-height: 1.6;
+    }
+
+    /* ─── Modals ─── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-width: 600px; width: 100%;
+      max-height: 80vh; overflow-y: auto;
+      padding: 28px; position: relative;
+    }
+    .modal-box h2 { font-size: 18px; margin-bottom: 6px; color: var(--text); }
+    .modal-box .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    .modal-close {
+      position: absolute; top: 16px; right: 18px;
+      background: none; border: none;
+      color: var(--muted); font-size: 22px;
+      cursor: pointer; line-height: 1;
+      transition: color 0.2s; padding: 4px;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section h3 { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+    .modal-section p, .modal-section ul { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    .modal-section ul { padding-left: 18px; }
+    .modal-section ul li { margin-bottom: 4px; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 600px) {
+      main { padding: 12px; }
+      .input-row { flex-direction: column; }
+      header h1 { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ Disclaimer Banner (sticky) ═══ -->
+<div id="disclaimer-banner">
+  <strong>Educational Use Only</strong> — This tool is for learning purposes only.
+  Always consult a qualified healthcare professional for medical advice.
+</div>
+
+<!-- ═══ Header ═══ -->
+<header>
+  <div class="header-left">
+    <div class="header-icon">💊</div>
+    <div>
+      <h1>Drug Safety Explorer</h1>
+      <p>Compare FDA adverse events, interactions, and recall history for any two drugs</p>
+    </div>
+  </div>
+  <button id="help-btn" title="How to read this data">?</button>
+</header>
+
+<!-- ═══ Main ═══ -->
+<main>
+
+  <!-- Input Section -->
+  <section class="input-section">
+    <h2>Select Drugs to Compare</h2>
+    <div class="input-row">
+      <div class="drug-input-group a">
+        <label><span>Drug A</span></label>
+        <select id="select-a" class="drug-select">
+          <option value="">— Select a drug —</option>
+          <option value="acetaminophen">Acetaminophen</option>
+          <option value="albuterol">Albuterol</option>
+          <option value="alprazolam">Alprazolam</option>
+          <option value="amlodipine">Amlodipine</option>
+          <option value="amoxicillin">Amoxicillin</option>
+          <option value="apixaban">Apixaban</option>
+          <option value="aspirin">Aspirin</option>
+          <option value="atorvastatin">Atorvastatin</option>
+          <option value="azithromycin">Azithromycin</option>
+          <option value="bupropion">Bupropion</option>
+          <option value="carvedilol">Carvedilol</option>
+          <option value="celecoxib">Celecoxib</option>
+          <option value="ciprofloxacin">Ciprofloxacin</option>
+          <option value="clindamycin">Clindamycin</option>
+          <option value="clonazepam">Clonazepam</option>
+          <option value="clopidogrel">Clopidogrel</option>
+          <option value="digoxin">Digoxin</option>
+          <option value="doxycycline">Doxycycline</option>
+          <option value="duloxetine">Duloxetine</option>
+          <option value="escitalopram">Escitalopram</option>
+          <option value="fluoxetine">Fluoxetine</option>
+          <option value="fluticasone">Fluticasone</option>
+          <option value="furosemide">Furosemide</option>
+          <option value="gabapentin">Gabapentin</option>
+          <option value="glipizide">Glipizide</option>
+          <option value="hydrocodone">Hydrocodone</option>
+          <option value="ibuprofen">Ibuprofen</option>
+          <option value="insulin">Insulin</option>
+          <option value="levothyroxine">Levothyroxine</option>
+          <option value="lisinopril">Lisinopril</option>
+          <option value="lithium">Lithium</option>
+          <option value="losartan">Losartan</option>
+          <option value="meloxicam">Meloxicam</option>
+          <option value="metformin">Metformin</option>
+          <option value="metoclopramide">Metoclopramide</option>
+          <option value="metoprolol">Metoprolol</option>
+          <option value="montelukast">Montelukast</option>
+          <option value="morphine">Morphine</option>
+          <option value="naproxen">Naproxen</option>
+          <option value="omeprazole">Omeprazole</option>
+          <option value="oxycodone">Oxycodone</option>
+          <option value="pantoprazole">Pantoprazole</option>
+          <option value="prednisone">Prednisone</option>
+          <option value="quetiapine">Quetiapine</option>
+          <option value="rivaroxaban">Rivaroxaban</option>
+          <option value="rosuvastatin">Rosuvastatin</option>
+          <option value="sertraline">Sertraline</option>
+          <option value="simvastatin">Simvastatin</option>
+          <option value="sitagliptin">Sitagliptin</option>
+          <option value="tramadol">Tramadol</option>
+          <option value="warfarin">Warfarin</option>
+          <option value="zolpidem">Zolpidem</option>
+        </select>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="drug-input-group b">
+        <label><span>Drug B</span></label>
+        <select id="select-b" class="drug-select">
+          <option value="">— Select a drug —</option>
+          <option value="acetaminophen">Acetaminophen</option>
+          <option value="albuterol">Albuterol</option>
+          <option value="alprazolam">Alprazolam</option>
+          <option value="amlodipine">Amlodipine</option>
+          <option value="amoxicillin">Amoxicillin</option>
+          <option value="apixaban">Apixaban</option>
+          <option value="aspirin">Aspirin</option>
+          <option value="atorvastatin">Atorvastatin</option>
+          <option value="azithromycin">Azithromycin</option>
+          <option value="bupropion">Bupropion</option>
+          <option value="carvedilol">Carvedilol</option>
+          <option value="celecoxib">Celecoxib</option>
+          <option value="ciprofloxacin">Ciprofloxacin</option>
+          <option value="clindamycin">Clindamycin</option>
+          <option value="clonazepam">Clonazepam</option>
+          <option value="clopidogrel">Clopidogrel</option>
+          <option value="digoxin">Digoxin</option>
+          <option value="doxycycline">Doxycycline</option>
+          <option value="duloxetine">Duloxetine</option>
+          <option value="escitalopram">Escitalopram</option>
+          <option value="fluoxetine">Fluoxetine</option>
+          <option value="fluticasone">Fluticasone</option>
+          <option value="furosemide">Furosemide</option>
+          <option value="gabapentin">Gabapentin</option>
+          <option value="glipizide">Glipizide</option>
+          <option value="hydrocodone">Hydrocodone</option>
+          <option value="ibuprofen">Ibuprofen</option>
+          <option value="insulin">Insulin</option>
+          <option value="levothyroxine">Levothyroxine</option>
+          <option value="lisinopril">Lisinopril</option>
+          <option value="lithium">Lithium</option>
+          <option value="losartan">Losartan</option>
+          <option value="meloxicam">Meloxicam</option>
+          <option value="metformin">Metformin</option>
+          <option value="metoclopramide">Metoclopramide</option>
+          <option value="metoprolol">Metoprolol</option>
+          <option value="montelukast">Montelukast</option>
+          <option value="morphine">Morphine</option>
+          <option value="naproxen">Naproxen</option>
+          <option value="omeprazole">Omeprazole</option>
+          <option value="oxycodone">Oxycodone</option>
+          <option value="pantoprazole">Pantoprazole</option>
+          <option value="prednisone">Prednisone</option>
+          <option value="quetiapine">Quetiapine</option>
+          <option value="rivaroxaban">Rivaroxaban</option>
+          <option value="rosuvastatin">Rosuvastatin</option>
+          <option value="sertraline">Sertraline</option>
+          <option value="simvastatin">Simvastatin</option>
+          <option value="sitagliptin">Sitagliptin</option>
+          <option value="tramadol">Tramadol</option>
+          <option value="warfarin">Warfarin</option>
+          <option value="zolpidem">Zolpidem</option>
+        </select>
+      </div>
+      <button id="compare-btn">Compare →</button>
+    </div>
+  </section>
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-tab="interactions">⚠️ Interaction Warnings</button>
+    <button class="tab-btn" data-tab="events">📊 Adverse Events</button>
+    <button class="tab-btn" data-tab="recalls">🔴 Recall History</button>
+    <button class="tab-btn" data-tab="graphs">📈 Data Graphs</button>
+  </div>
+
+  <!-- ── Tab 1: Interactions ── -->
+  <div class="tab-panel active" id="tab-interactions">
+
+    <!-- Section A: FDA Interaction Warnings -->
+    <div class="tab-section-header">
+      <h3>FDA Label — Drug Interaction Warnings</h3>
+      <button class="info-btn" data-modal="modal-info-interactions">ⓘ</button>
+    </div>
+    <div class="results-grid">
+      <div class="drug-col">
+        <div class="drug-col-header a">
+          <div>
+            <div class="drug-col-name" id="name-interactions-a">Drug A</div>
+            <div class="drug-col-sub">Interaction warnings from FDA label</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-interactions-a">
+          <div class="empty-state">
+            <div class="icon">🔍</div>
+            <p>Select drugs above and click <strong>Compare</strong> to see interaction data.</p>
+          </div>
+        </div>
+      </div>
+      <div class="drug-col">
+        <div class="drug-col-header b">
+          <div>
+            <div class="drug-col-name" id="name-interactions-b">Drug B</div>
+            <div class="drug-col-sub">Interaction warnings from FDA label</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-interactions-b">
+          <div class="empty-state">
+            <div class="icon">🔍</div>
+            <p>Select drugs above and click <strong>Compare</strong> to see interaction data.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section B: Additional Warnings & Precautions -->
+    <hr class="section-divider" />
+    <div class="tab-section-header">
+      <h3>Additional Warnings &amp; Precautions</h3>
+      <button class="info-btn" data-modal="modal-info-warnings">ⓘ</button>
+    </div>
+    <div class="results-grid">
+      <div class="drug-col">
+        <div class="drug-col-header a">
+          <div>
+            <div class="drug-col-name" id="name-warnings-a">Drug A</div>
+            <div class="drug-col-sub">Warnings &amp; precautions from FDA label</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-warnings-a">
+          <div class="empty-state">
+            <div class="icon">⚠️</div>
+            <p>Warnings will appear here after comparing.</p>
+          </div>
+        </div>
+      </div>
+      <div class="drug-col">
+        <div class="drug-col-header b">
+          <div>
+            <div class="drug-col-name" id="name-warnings-b">Drug B</div>
+            <div class="drug-col-sub">Warnings &amp; precautions from FDA label</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-warnings-b">
+          <div class="empty-state">
+            <div class="icon">⚠️</div>
+            <p>Warnings will appear here after comparing.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tab 2: Adverse Events ── -->
+  <div class="tab-panel" id="tab-events">
+    <div class="tab-section-header">
+      <h3>FAERS — Top Reported Adverse Reactions</h3>
+      <button class="info-btn" data-modal="modal-info-events">ⓘ</button>
+    </div>
+    <div class="results-grid">
+      <div class="drug-col">
+        <div class="drug-col-header a">
+          <div>
+            <div class="drug-col-name" id="name-events-a">Drug A</div>
+            <div class="drug-col-sub">Top 10 reactions by report count</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-events-a">
+          <div class="empty-state"><div class="icon">📊</div><p>Chart will appear here.</p></div>
+        </div>
+      </div>
+      <div class="drug-col">
+        <div class="drug-col-header b">
+          <div>
+            <div class="drug-col-name" id="name-events-b">Drug B</div>
+            <div class="drug-col-sub">Top 10 reactions by report count</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-events-b">
+          <div class="empty-state"><div class="icon">📊</div><p>Chart will appear here.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shared reactions -->
+    <hr class="section-divider" />
+    <div class="tab-section-header">
+      <span class="shared-badge">SHARED</span>
+      <h3>Adverse Events Reported for Both Drugs</h3>
+    </div>
+    <div id="shared-events-panel">
+      <div class="empty-state"><p>Shared reactions will appear after comparing.</p></div>
+    </div>
+
+    <!-- Co-administration -->
+    <hr class="section-divider" />
+    <div class="tab-section-header">
+      <h3>Co-Administration Reports</h3>
+    </div>
+    <div id="coadmin-panel">
+      <div class="empty-state"><p>Co-administration data will appear after comparing.</p></div>
+    </div>
+  </div>
+
+  <!-- ── Tab 3: Recalls ── -->
+  <div class="tab-panel" id="tab-recalls">
+    <div class="tab-section-header">
+      <h3>FDA Enforcement — Recall History</h3>
+      <button class="info-btn" data-modal="modal-info-recalls">ⓘ</button>
+    </div>
+    <div class="results-grid">
+      <div class="drug-col">
+        <div class="drug-col-header a">
+          <div>
+            <div class="drug-col-name" id="name-recalls-a">Drug A</div>
+            <div class="drug-col-sub">FDA recall and enforcement actions</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-recalls-a">
+          <div class="empty-state"><div class="icon">📋</div><p>Recall history will appear here.</p></div>
+        </div>
+      </div>
+      <div class="drug-col">
+        <div class="drug-col-header b">
+          <div>
+            <div class="drug-col-name" id="name-recalls-b">Drug B</div>
+            <div class="drug-col-sub">FDA recall and enforcement actions</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-recalls-b">
+          <div class="empty-state"><div class="icon">📋</div><p>Recall history will appear here.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tab 4: Data Graphs ── -->
+  <div class="tab-panel" id="tab-graphs">
+
+    <!-- Patient Outcomes (first) -->
+    <div class="tab-section-header">
+      <h3>Patient Outcome Distribution</h3>
+    </div>
+    <div class="results-grid">
+      <div class="drug-col">
+        <div class="drug-col-header a">
+          <div>
+            <div class="drug-col-name" id="name-outcomes-a">Drug A</div>
+            <div class="drug-col-sub">Recovery outcomes from FAERS reports</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-outcomes-a">
+          <div class="empty-state"><div class="icon">🏥</div><p>Outcome data will appear here.</p></div>
+        </div>
+      </div>
+      <div class="drug-col">
+        <div class="drug-col-header b">
+          <div>
+            <div class="drug-col-name" id="name-outcomes-b">Drug B</div>
+            <div class="drug-col-sub">Recovery outcomes from FAERS reports</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-outcomes-b">
+          <div class="empty-state"><div class="icon">🏥</div><p>Outcome data will appear here.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seriousness Breakdown -->
+    <hr class="section-divider" />
+    <div class="tab-section-header">
+      <h3>Serious vs Non-Serious Reports</h3>
+    </div>
+    <div class="results-grid">
+      <div class="drug-col">
+        <div class="drug-col-header a">
+          <div>
+            <div class="drug-col-name" id="name-serious-a">Drug A</div>
+            <div class="drug-col-sub">Proportion of serious reports</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-serious-a">
+          <div class="empty-state"><div class="icon">⚖️</div><p>Seriousness data will appear here.</p></div>
+        </div>
+      </div>
+      <div class="drug-col">
+        <div class="drug-col-header b">
+          <div>
+            <div class="drug-col-name" id="name-serious-b">Drug B</div>
+            <div class="drug-col-sub">Proportion of serious reports</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-serious-b">
+          <div class="empty-state"><div class="icon">⚖️</div><p>Seriousness data will appear here.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sex Distribution -->
+    <hr class="section-divider" />
+    <div class="tab-section-header">
+      <h3>Reported Patient Sex</h3>
+    </div>
+    <div class="results-grid">
+      <div class="drug-col">
+        <div class="drug-col-header a">
+          <div>
+            <div class="drug-col-name" id="name-sex-a">Drug A</div>
+            <div class="drug-col-sub">Sex of patients in FAERS reports</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-sex-a">
+          <div class="empty-state"><div class="icon">👥</div><p>Sex distribution will appear here.</p></div>
+        </div>
+      </div>
+      <div class="drug-col">
+        <div class="drug-col-header b">
+          <div>
+            <div class="drug-col-name" id="name-sex-b">Drug B</div>
+            <div class="drug-col-sub">Sex of patients in FAERS reports</div>
+          </div>
+        </div>
+        <div class="drug-col-body" id="body-sex-b">
+          <div class="empty-state"><div class="icon">👥</div><p>Sex distribution will appear here.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attribution -->
+  <div id="attribution">
+    This product uses publicly available data from the U.S. Food and Drug Administration (FDA).
+    FDA is not responsible for this product and does not endorse or recommend this or any other product.<br/>
+    Data sources: <strong>OpenFDA API</strong> · <strong>FAERS (Adverse Event Reporting System)</strong>
+  </div>
+
+</main>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- General Help -->
+<div class="modal-overlay" id="modal-help">
+  <div class="modal-box">
+    <button class="modal-close" data-close="modal-help">×</button>
+    <h2>How to Read This Data</h2>
+    <p class="modal-sub">A guide to interpreting the three data sources used in this tool.</p>
+    <div class="modal-section">
+      <h3>⚠️ Interaction Warnings</h3>
+      <p>Text from the FDA-approved prescribing label — the same document pharmacists and physicians use. Lists known drug interactions documented in clinical trials or post-market surveillance.</p>
+    </div>
+    <div class="modal-section">
+      <h3>🛡️ Additional Warnings &amp; Precautions</h3>
+      <p>Black box warnings (the FDA's most serious alert) and general warnings &amp; precautions from the same FDA label. Black box warnings indicate risks serious enough to require bold, bordered text on every package.</p>
+    </div>
+    <div class="modal-section">
+      <h3>📊 Adverse Events (FAERS)</h3>
+      <p>Voluntary reports from patients, doctors, and manufacturers. Key caveats:</p>
+      <ul>
+        <li>Reports are <strong>not proof</strong> the drug caused the reaction.</li>
+        <li>Popular drugs have more reports due to higher usage.</li>
+        <li>Serious reactions are more likely to be reported than mild ones.</li>
+      </ul>
+    </div>
+    <div class="modal-section">
+      <h3>🔴 Recall History</h3>
+      <p>FDA enforcement actions classified by severity: Class I (death possible) → Class II (reversible harm) → Class III (regulatory violation only).</p>
+    </div>
+    <div class="modal-section">
+      <h3>🔍 Tips</h3>
+      <ul>
+        <li>Use <strong>generic names</strong> for best results (e.g., "ibuprofen" not "Advil").</li>
+        <li>Some older generics have limited FDA label data.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Info — Interactions -->
+<div class="modal-overlay" id="modal-info-interactions">
+  <div class="modal-box">
+    <button class="modal-close" data-close="modal-info-interactions">×</button>
+    <h2>About Interaction Warnings</h2>
+    <p class="modal-sub">Source: FDA Drug Label (<code>/drug/label.json</code>)</p>
+    <div class="modal-section">
+      <h3>What this data is</h3>
+      <p>Taken directly from Section 7 of the FDA-approved prescribing label. Lists drugs, foods, and conditions that can alter the drug's effect or increase risk.</p>
+    </div>
+    <div class="modal-section">
+      <h3>Limitations</h3>
+      <ul>
+        <li>Does <strong>not</strong> predict interactions in a specific patient.</li>
+        <li>Absence from the list doesn't mean it's safe to combine.</li>
+        <li>Labels may be outdated for older drugs.</li>
+      </ul>
+    </div>
+    <div class="modal-section">
+      <h3>Next steps</h3>
+      <p>Use as a starting point for a conversation with your pharmacist or doctor — never as a replacement for professional advice.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Info — Warnings -->
+<div class="modal-overlay" id="modal-info-warnings">
+  <div class="modal-box">
+    <button class="modal-close" data-close="modal-info-warnings">×</button>
+    <h2>About Additional Warnings</h2>
+    <p class="modal-sub">Source: FDA Drug Label (<code>/drug/label.json</code>)</p>
+    <div class="modal-section">
+      <h3>Black Box Warnings</h3>
+      <p>The FDA's most serious warning level. Required when there is reasonable evidence of a serious hazard and the benefit-to-risk ratio must be carefully considered. The name comes from the black border surrounding the text on drug packaging.</p>
+    </div>
+    <div class="modal-section">
+      <h3>Warnings &amp; Precautions</h3>
+      <p>Section 5 of the FDA label. Lists serious adverse reactions and safety concerns that may require monitoring, dose adjustment, or discontinuation. Less severe than black box warnings but still clinically significant.</p>
+    </div>
+    <div class="modal-section">
+      <h3>Important reminder</h3>
+      <p>These warnings describe population-level risks observed during trials and post-market surveillance. They do not predict individual outcomes. Always consult a healthcare provider before changing any medication.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Info — Adverse Events -->
+<div class="modal-overlay" id="modal-info-events">
+  <div class="modal-box">
+    <button class="modal-close" data-close="modal-info-events">×</button>
+    <h2>About Adverse Event Data</h2>
+    <p class="modal-sub">Source: FDA FAERS (<code>/drug/event.json</code>)</p>
+    <div class="modal-section">
+      <h3>What FAERS is</h3>
+      <p>The world's largest pharmacovigilance database — voluntary safety reports from patients, healthcare professionals, and manufacturers worldwide.</p>
+    </div>
+    <div class="modal-section">
+      <h3>Critical limitations</h3>
+      <ul>
+        <li><strong>Correlation ≠ causation:</strong> A report doesn't prove the drug caused the event.</li>
+        <li><strong>Volume bias:</strong> Widely prescribed drugs have more reports by default.</li>
+        <li><strong>Reporting bias:</strong> Severe or unusual reactions are over-represented.</li>
+        <li><strong>Duplicate reports:</strong> The same event may appear multiple times.</li>
+        <li><strong>Underreporting:</strong> Estimated 1–10% of reactions are ever submitted.</li>
+      </ul>
+    </div>
+    <div class="modal-section">
+      <h3>How to interpret the chart</h3>
+      <p>Higher bars = more reports, <em>not</em> higher risk. Compare patterns within a drug, not absolute counts between drugs.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Info — Recalls -->
+<div class="modal-overlay" id="modal-info-recalls">
+  <div class="modal-box">
+    <button class="modal-close" data-close="modal-info-recalls">×</button>
+    <h2>About Recall Classifications</h2>
+    <p class="modal-sub">Source: FDA Enforcement Reports (<code>/drug/enforcement.json</code>)</p>
+    <div class="modal-section">
+      <h3>Class I — Most Serious</h3>
+      <p style="color:#ff7b72">Reasonable probability of serious adverse health consequences or death.</p>
+      <p style="margin-top:6px;font-size:13px;color:var(--muted)">Example: Drug contaminated with a toxic substance, or wrong active ingredient.</p>
+    </div>
+    <div class="modal-section">
+      <h3>Class II — Moderate</h3>
+      <p style="color:#ffa657">May cause temporary or medically reversible adverse consequences.</p>
+      <p style="margin-top:6px;font-size:13px;color:var(--muted)">Example: Labeling error causing confusion but unlikely to cause lasting harm.</p>
+    </div>
+    <div class="modal-section">
+      <h3>Class III — Least Serious</h3>
+      <p style="color:#e3b341">Unlikely to cause adverse health consequences, but violates FDA regulations.</p>
+      <p style="margin-top:6px;font-size:13px;color:var(--muted)">Example: Minor packaging defects or administrative violations.</p>
+    </div>
+    <div class="modal-section">
+      <h3>Important note</h3>
+      <p>Past recalls don't mean a drug is currently unsafe. Most recalled lots have been removed from market. Check FDA.gov for current safety alerts.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCRIPT ═══ -->
+<script>
+  'use strict';
+
+  const charts = { a: null, b: null, sA: null, sB: null, oA: null, oB: null, xA: null, xB: null };
+  let lastDrugA = '';
+  let lastDrugB = '';
+
+  /* ── Tab switching ── */
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  /* ── Modal system ── */
+  function openModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('open');
+  }
+  function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  }
+
+  document.getElementById('help-btn').addEventListener('click', () => openModal('modal-help'));
+
+  // Close buttons: data-close holds the exact element id
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+
+  // Click outside modal box closes it
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+
+  // Info buttons: data-modal holds the exact element id to open
+  document.querySelectorAll('.info-btn').forEach(btn => {
+    btn.addEventListener('click', () => openModal(btn.dataset.modal));
+  });
+
+  /* ── API engine ── */
+  const FDA = 'https://api.fda.gov';
+
+  async function fetchLabel(drug) {
+    const q = encodeURIComponent(`openfda.generic_name:"${drug}"`);
+    const res = await fetch(`${FDA}/drug/label.json?search=${q}&limit=1`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Label API error ${res.status}`);
+    return res.json();
+  }
+
+  async function fetchEvents(drug) {
+    const q = encodeURIComponent(`patient.drug.medicinalproduct:"${drug}"`);
+    const count = encodeURIComponent('patient.reaction.reactionmeddrapt.exact');
+    const res = await fetch(`${FDA}/drug/event.json?search=${q}&count=${count}&limit=10`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Events API error ${res.status}`);
+    return res.json();
+  }
+
+  async function fetchRecalls(drug) {
+    const q = encodeURIComponent(`product_description:"${drug}"`);
+    const res = await fetch(`${FDA}/drug/enforcement.json?search=${q}&limit=20`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Recalls API error ${res.status}`);
+    return res.json();
+  }
+
+  async function fetchCount(drug, field, limit = 10) {
+    const q = encodeURIComponent(`patient.drug.medicinalproduct:"${drug}"`);
+    const c = encodeURIComponent(field);
+    const res = await fetch(`${FDA}/drug/event.json?search=${q}&count=${c}&limit=${limit}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json();
+  }
+
+  async function fetchCoAdmin(drugA, drugB) {
+    const search = encodeURIComponent(
+      `patient.drug.medicinalproduct:"${drugA}" AND patient.drug.medicinalproduct:"${drugB}"`
+    );
+    const countParam = encodeURIComponent('patient.reaction.reactionmeddrapt.exact');
+    const [totalRes, reactionsRes] = await Promise.all([
+      fetch(`${FDA}/drug/event.json?search=${search}&limit=1`),
+      fetch(`${FDA}/drug/event.json?search=${search}&count=${countParam}&limit=10`),
+    ]);
+    if (totalRes.status === 404) return { total: 0, reactions: [] };
+    const totalData = await totalRes.json();
+    const total = totalData.meta?.results?.total ?? 0;
+    let reactions = [];
+    if (reactionsRes.ok) {
+      const rd = await reactionsRes.json();
+      reactions = rd.results || [];
+    }
+    return { total, reactions };
+  }
+
+  /* ── Render helpers ── */
+  function spinner() {
+    return `<div class="spinner-wrap"><div class="spinner"></div></div>`;
+  }
+  function emptyMsg(msg) {
+    return `<div class="empty-state"><p>${msg}</p></div>`;
+  }
+  function errorBlock(msg, retryFn) {
+    const id = 'retry-' + Math.random().toString(36).slice(2);
+    setTimeout(() => {
+      const btn = document.getElementById(id);
+      if (btn) btn.addEventListener('click', retryFn);
+    }, 0);
+    return `<div class="error-state">
+      <div>⚠️ ${msg}</div>
+      <button class="retry-btn" id="${id}">Try Again</button>
+    </div>`;
+  }
+  function setColName(tab, side, name) {
+    const el = document.getElementById(`name-${tab}-${side}`);
+    if (el) el.textContent = capitalize(name);
+  }
+  function capitalize(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ── Tab 1a: Interaction Warnings ── */
+  function renderInteractions(side, data, drugName) {
+    const body = document.getElementById(`body-interactions-${side}`);
+    if (!data || !data.results || !data.results.length) {
+      body.innerHTML = emptyMsg(`No FDA label found for <strong>${capitalize(drugName)}</strong>. Try the generic name.`);
+      return;
+    }
+    const text = data.results[0].drug_interactions?.[0] ?? null;
+    if (!text) {
+      body.innerHTML = emptyMsg('No drug interaction information found in this FDA label.');
+      return;
+    }
+    body.innerHTML = `<div class="interaction-text">${escapeHtml(text)}</div>`;
+  }
+
+  /* ── Tab 1b: Additional Warnings ── */
+  function renderWarnings(side, data, drugName) {
+    const body = document.getElementById(`body-warnings-${side}`);
+    setColName('warnings', side, drugName);
+
+    if (!data || !data.results || !data.results.length) {
+      body.innerHTML = emptyMsg(`No warnings data found for <strong>${capitalize(drugName)}</strong>.`);
+      return;
+    }
+
+    const r = data.results[0];
+    const boxed   = r.boxed_warning?.[0]          ?? null;
+    const warnCau = r.warnings_and_cautions?.[0]  ?? null;
+    const warn    = r.warnings?.[0]               ?? null;
+    const mainWarn = warnCau || warn;
+
+    let html = '';
+
+    if (boxed) {
+      html += `<div class="warning-block boxed">
+        <div class="warning-block-label">⬛ Black Box Warning — Most Serious</div>
+        <div class="warning-text">${escapeHtml(boxed)}</div>
+      </div>`;
+    }
+
+    if (mainWarn) {
+      html += `<div class="warning-block">
+        <div class="warning-block-label">⚠️ Warnings &amp; Precautions</div>
+        <div class="warning-text">${escapeHtml(mainWarn)}</div>
+      </div>`;
+    }
+
+    if (!html) {
+      body.innerHTML = emptyMsg('No additional warnings found in this FDA label.');
+      return;
+    }
+
+    body.innerHTML = html;
+  }
+
+  /* ── Tab 2: Adverse Events Chart ── */
+  function renderEvents(side, data, drugName) {
+    const body = document.getElementById(`body-events-${side}`);
+    if (!data || !data.results || !data.results.length) {
+      body.innerHTML = emptyMsg(`No adverse event reports found for <strong>${capitalize(drugName)}</strong>.`);
+      return;
+    }
+
+    const labels   = data.results.map(r => r.term);
+    const counts   = data.results.map(r => r.count);
+    const canvasId = `chart-${side}-${Date.now()}`;
+
+    body.innerHTML = `
+      <div class="chart-wrap"><canvas id="${canvasId}"></canvas></div>
+      <div class="faers-note">
+        ⚠️ FAERS reports are voluntarily submitted. A report linking a drug to a reaction
+        <strong>does not prove</strong> the drug caused it. Counts reflect report volume, not risk level.
+      </div>`;
+
+    if (charts[side]) { charts[side].destroy(); charts[side] = null; }
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[side] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Reports',
+          data: counts,
+          backgroundColor: side === 'a' ? 'rgba(88,166,255,0.75)' : 'rgba(188,140,255,0.75)',
+          borderColor:     side === 'a' ? '#58a6ff'               : '#bc8cff',
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ` ${c.parsed.x.toLocaleString()} reports` } }
+        },
+        scales: {
+          x: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: 'rgba(48,54,61,0.8)' } },
+          y: {
+            ticks: {
+              color: '#e6edf3', font: { size: 11 },
+              callback: v => { const l = labels[v] || ''; return l.length > 22 ? l.slice(0,21)+'…' : l; }
+            },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  /* ── Tab 2 extra: Shared reactions ── */
+  function renderSharedReactions(eventsA, eventsB, drugA, drugB) {
+    const panel = document.getElementById('shared-events-panel');
+    if (!eventsA?.results || !eventsB?.results) {
+      panel.innerHTML = emptyMsg('No shared event data available.');
+      return;
+    }
+    const mapA = new Map(eventsA.results.map(r => [r.term, r.count]));
+    const mapB = new Map(eventsB.results.map(r => [r.term, r.count]));
+    const shared = [...mapA.keys()].filter(t => mapB.has(t));
+    if (!shared.length) {
+      panel.innerHTML = emptyMsg('No reactions appear in the top 10 for both drugs.');
+      return;
+    }
+    const rows = shared.map(term => `
+      <div class="shared-row">
+        <span class="shared-row-name">${escapeHtml(term)}</span>
+        <div class="shared-counts">
+          <span class="count-pill a">${mapA.get(term).toLocaleString()}</span>
+          <span class="count-pill b">${mapB.get(term).toLocaleString()}</span>
+        </div>
+      </div>`).join('');
+    panel.innerHTML = `<div class="shared-section">
+      <p class="section-note">
+        These reactions appear in the top reported events for both drugs.
+        <span class="count-pill a">${capitalize(drugA)}</span>
+        <span class="count-pill b">${capitalize(drugB)}</span>
+      </p>
+      ${rows}
+    </div>`;
+  }
+
+  /* ── Tab 2 extra: Co-administration ── */
+  function renderCoAdmin(data, drugA, drugB) {
+    const panel = document.getElementById('coadmin-panel');
+    if (!data || data.total === 0) {
+      panel.innerHTML = emptyMsg(`No co-administration reports found for ${capitalize(drugA)} + ${capitalize(drugB)}.`);
+      return;
+    }
+    const reactionRows = data.reactions.map(r => `
+      <div class="coadmin-row">
+        <span class="coadmin-row-name">${escapeHtml(r.term)}</span>
+        <span class="coadmin-count-pill">${r.count.toLocaleString()}</span>
+      </div>`).join('');
+    panel.innerHTML = `<div class="coadmin-section">
+      <p class="coadmin-label">Reports where <strong>both</strong> ${escapeHtml(capitalize(drugA))} and ${escapeHtml(capitalize(drugB))} were listed:</p>
+      <div class="coadmin-total">${data.total.toLocaleString()}</div>
+      <p class="coadmin-unit">reports</p>
+      ${data.reactions.length ? `
+        <p class="coadmin-subtitle">Most common reactions in these reports:</p>
+        ${reactionRows}` : '<p class="coadmin-subtitle">No reaction breakdown available.</p>'}
+    </div>`;
+  }
+
+  /* ── Tab 4: Data Graphs ── */
+
+  function toYearMap(data) {
+    const m = {};
+    if (!data?.results) return m;
+    data.results.forEach(r => {
+      const y = String(r.term).slice(0, 4);
+      if (y >= '2004' && y <= '2025') m[y] = (m[y] || 0) + r.count;
+    });
+    return m;
+  }
+
+  function renderTrend(trendA, trendB, drugA, drugB) {
+    const panel = document.getElementById('body-trend');
+    const mapA = toYearMap(trendA);
+    const mapB = toYearMap(trendB);
+    const allYears = [...new Set([...Object.keys(mapA), ...Object.keys(mapB)])].sort();
+    if (!allYears.length) {
+      panel.innerHTML = emptyMsg('No trend data available for these drugs.');
+      return;
+    }
+    const canvasId = `chart-trend-${Date.now()}`;
+    panel.innerHTML = `
+      <div class="graph-trend-wrap"><canvas id="${canvasId}"></canvas></div>
+      <div class="faers-note" style="margin-top:10px">
+        ⚠️ Yearly counts are approximated from the most frequently reported dates in FAERS.
+        Values may undercount years with many low-frequency report dates.
+      </div>`;
+    if (charts.trend) { charts.trend.destroy(); charts.trend = null; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts.trend = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: allYears,
+        datasets: [
+          {
+            label: capitalize(drugA),
+            data: allYears.map(y => mapA[y] || 0),
+            borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.12)',
+            fill: true, tension: 0.35, pointRadius: 4, pointHoverRadius: 6,
+          },
+          {
+            label: capitalize(drugB),
+            data: allYears.map(y => mapB[y] || 0),
+            borderColor: '#bc8cff', backgroundColor: 'rgba(188,140,255,0.10)',
+            fill: true, tension: 0.35, pointRadius: 4, pointHoverRadius: 6,
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: true, labels: { color: '#e6edf3', padding: 16, font: { size: 13 } } },
+          tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toLocaleString()} reports` } }
+        },
+        scales: {
+          x: { ticks: { color: '#8b949e' }, grid: { color: 'rgba(48,54,61,0.8)' } },
+          y: { ticks: { color: '#8b949e' }, grid: { color: 'rgba(48,54,61,0.8)' }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  function renderSerious(side, data, drugName) {
+    const body = document.getElementById(`body-serious-${side}`);
+    setColName('serious', side, drugName);
+    if (!data?.results?.length) {
+      body.innerHTML = emptyMsg(`No seriousness data for <strong>${capitalize(drugName)}</strong>.`);
+      return;
+    }
+    const labelMap = { '1': 'Serious', '2': 'Non-Serious' };
+    const labels = data.results.map(r => labelMap[String(r.term)] || `Code ${r.term}`);
+    const counts = data.results.map(r => r.count);
+    const bgColors = data.results.map(r =>
+      String(r.term) === '1' ? 'rgba(248,81,73,0.85)' : 'rgba(88,166,255,0.85)');
+    const canvasId = `chart-serious-${side}-${Date.now()}`;
+    body.innerHTML = `<div class="donut-wrap"><canvas id="${canvasId}"></canvas></div>`;
+    const key = `s${side.toUpperCase()}`;
+    if (charts[key]) { charts[key].destroy(); charts[key] = null; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[key] = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: counts, backgroundColor: bgColors, borderWidth: 2, hoverOffset: 6 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { color: '#e6edf3', padding: 14, font: { size: 12 } } },
+          tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toLocaleString()}` } }
+        }
+      }
+    });
+  }
+
+  const OUTCOME_LABELS = {
+    '1': 'Recovered',  '2': 'Recovering',
+    '3': 'Not Recovered', '4': 'Recovered w/ Sequelae',
+    '5': 'Fatal', '6': 'Unknown',
+  };
+  function renderOutcomes(side, data, drugName) {
+    const body = document.getElementById(`body-outcomes-${side}`);
+    setColName('outcomes', side, drugName);
+    if (!data?.results?.length) {
+      body.innerHTML = emptyMsg(`No outcome data for <strong>${capitalize(drugName)}</strong>.`);
+      return;
+    }
+    const labels = data.results.map(r => OUTCOME_LABELS[r.term] || `Code ${r.term}`);
+    const counts = data.results.map(r => r.count);
+    const bgColors = data.results.map(r => ({
+      '5': 'rgba(248,81,73,0.82)', '3': 'rgba(251,133,0,0.82)',
+      '4': 'rgba(210,153,34,0.82)', '1': 'rgba(63,185,80,0.82)',
+      '2': 'rgba(88,166,255,0.82)',
+    }[r.term] || 'rgba(139,148,158,0.6)'));
+    const canvasId = `chart-outcomes-${side}-${Date.now()}`;
+    body.innerHTML = `<div class="chart-wrap"><canvas id="${canvasId}"></canvas></div>`;
+    const key = `o${side.toUpperCase()}`;
+    if (charts[key]) { charts[key].destroy(); charts[key] = null; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[key] = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Reports', data: counts, backgroundColor: bgColors, borderRadius: 4, borderWidth: 0 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ` ${c.parsed.x.toLocaleString()} reports` } }
+        },
+        scales: {
+          x: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: 'rgba(48,54,61,0.8)' } },
+          y: { ticks: { color: '#e6edf3', font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  const SEX_LABELS = { '0': 'Unknown', '1': 'Male', '2': 'Female' };
+  function renderSex(side, data, drugName) {
+    const body = document.getElementById(`body-sex-${side}`);
+    setColName('sex', side, drugName);
+    if (!data?.results?.length) {
+      body.innerHTML = emptyMsg(`No sex distribution data for <strong>${capitalize(drugName)}</strong>.`);
+      return;
+    }
+    const labels = data.results.map(r => SEX_LABELS[r.term] || `Code ${r.term}`);
+    const counts = data.results.map(r => r.count);
+    const bgColors = data.results.map(r => ({
+      '1': 'rgba(88,166,255,0.82)', '2': 'rgba(188,140,255,0.82)',
+    }[r.term] || 'rgba(139,148,158,0.6)'));
+    const canvasId = `chart-sex-${side}-${Date.now()}`;
+    body.innerHTML = `<div class="donut-wrap"><canvas id="${canvasId}"></canvas></div>`;
+    const key = `x${side.toUpperCase()}`;
+    if (charts[key]) { charts[key].destroy(); charts[key] = null; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[key] = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: counts, backgroundColor: bgColors, borderWidth: 2, hoverOffset: 6 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { color: '#e6edf3', padding: 14, font: { size: 12 } } },
+          tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toLocaleString()}` } }
+        }
+      }
+    });
+  }
+
+  /* ── Tab 3: Recall History ── */
+  function classLabel(cls) {
+    if (!cls) return '';
+    const c = cls.trim().toLowerCase();
+    if (c.includes('iii')) return 'Class III';
+    if (c.includes('ii'))  return 'Class II';
+    if (c.includes('i'))   return 'Class I';
+    return cls;
+  }
+  function classCss(cls) {
+    const l = classLabel(cls);
+    if (l === 'Class I')   return 'class-i';
+    if (l === 'Class II')  return 'class-ii';
+    if (l === 'Class III') return 'class-iii';
+    return 'class-iii';
+  }
+  function formatDate(d) {
+    if (!d || d.length < 8) return d || '';
+    return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+  }
+
+  function renderRecalls(side, data, drugName) {
+    const body = document.getElementById(`body-recalls-${side}`);
+    if (!data || !data.results || !data.results.length) {
+      body.innerHTML = emptyMsg(`No recall history found for <strong>${capitalize(drugName)}</strong>.`);
+      return;
+    }
+    const sorted = [...data.results].sort((a,b) =>
+      (b.recall_initiation_date || '').localeCompare(a.recall_initiation_date || ''));
+
+    const cards = sorted.map(r => {
+      const css     = classCss(r.classification);
+      const badge   = classLabel(r.classification);
+      const date    = formatDate(r.recall_initiation_date);
+      const product = escapeHtml((r.product_description || 'Unknown product').slice(0, 120));
+      const reason  = escapeHtml(r.reason_for_recall || 'Reason not specified');
+      return `<div class="recall-card ${css}">
+        <div class="recall-bar"></div>
+        <div class="recall-body">
+          <div class="recall-meta">
+            <span class="recall-class-badge">${badge}</span>
+            <span class="recall-date">${date}</span>
+          </div>
+          <div class="recall-product">${product}</div>
+          <div class="recall-reason">${reason}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    body.innerHTML = `<div class="recall-list">${cards}</div>`;
+  }
+
+  /* ── Compare orchestrator ── */
+  async function compare(drugA, drugB) {
+    lastDrugA = drugA;
+    lastDrugB = drugB;
+
+    const btn = document.getElementById('compare-btn');
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+
+    // Update all column names
+    ['interactions','events','recalls','serious','outcomes','sex'].forEach(tab => {
+      setColName(tab, 'a', drugA);
+      setColName(tab, 'b', drugB);
+    });
+    setColName('warnings', 'a', drugA);
+    setColName('warnings', 'b', drugB);
+
+    // Spinners in all panels
+    ['interactions','warnings','events','recalls'].forEach(tab => {
+      document.getElementById(`body-${tab}-a`).innerHTML = spinner();
+      document.getElementById(`body-${tab}-b`).innerHTML = spinner();
+    });
+    document.getElementById('shared-events-panel').innerHTML = spinner();
+    document.getElementById('coadmin-panel').innerHTML = spinner();
+
+    // Spinners in graphs tab
+    ['serious','outcomes','sex'].forEach(s =>
+      ['a','b'].forEach(side =>
+        document.getElementById(`body-${s}-${side}`).innerHTML = spinner()));
+
+
+    try {
+      const [
+        labelA, labelB, eventsA, eventsB, recallsA, recallsB, coAdmin,
+        seriousA, seriousB, outcomesA, outcomesB, sexA, sexB,
+      ] = await Promise.all([
+          fetchLabel(drugA).catch(e => ({ _error: e.message })),
+          fetchLabel(drugB).catch(e => ({ _error: e.message })),
+          fetchEvents(drugA).catch(e => ({ _error: e.message })),
+          fetchEvents(drugB).catch(e => ({ _error: e.message })),
+          fetchRecalls(drugA).catch(e => ({ _error: e.message })),
+          fetchRecalls(drugB).catch(e => ({ _error: e.message })),
+          fetchCoAdmin(drugA, drugB).catch(() => ({ total: 0, reactions: [] })),
+          fetchCount(drugA, 'serious', 2).catch(() => null),
+          fetchCount(drugB, 'serious', 2).catch(() => null),
+          fetchCount(drugA, 'patient.reaction.reactionoutcome', 6).catch(() => null),
+          fetchCount(drugB, 'patient.reaction.reactionoutcome', 6).catch(() => null),
+          fetchCount(drugA, 'patient.patientsex', 3).catch(() => null),
+          fetchCount(drugB, 'patient.patientsex', 3).catch(() => null),
+        ]);
+
+      const retry = () => compare(lastDrugA, lastDrugB);
+
+      // Interactions
+      if (labelA?._error) document.getElementById('body-interactions-a').innerHTML = errorBlock(labelA._error, retry);
+      else renderInteractions('a', labelA, drugA);
+
+      if (labelB?._error) document.getElementById('body-interactions-b').innerHTML = errorBlock(labelB._error, retry);
+      else renderInteractions('b', labelB, drugB);
+
+      // Additional warnings (reuse label data)
+      if (labelA?._error) document.getElementById('body-warnings-a').innerHTML = errorBlock(labelA._error, retry);
+      else renderWarnings('a', labelA, drugA);
+
+      if (labelB?._error) document.getElementById('body-warnings-b').innerHTML = errorBlock(labelB._error, retry);
+      else renderWarnings('b', labelB, drugB);
+
+      // Adverse events
+      if (eventsA?._error) document.getElementById('body-events-a').innerHTML = errorBlock(eventsA._error, retry);
+      else renderEvents('a', eventsA, drugA);
+
+      if (eventsB?._error) document.getElementById('body-events-b').innerHTML = errorBlock(eventsB._error, retry);
+      else renderEvents('b', eventsB, drugB);
+
+      // Recalls
+      if (recallsA?._error) document.getElementById('body-recalls-a').innerHTML = errorBlock(recallsA._error, retry);
+      else renderRecalls('a', recallsA, drugA);
+
+      if (recallsB?._error) document.getElementById('body-recalls-b').innerHTML = errorBlock(recallsB._error, retry);
+      else renderRecalls('b', recallsB, drugB);
+
+      // Shared reactions (computed from already-fetched event data)
+      if (!eventsA?._error && !eventsB?._error) {
+        renderSharedReactions(eventsA, eventsB, drugA, drugB);
+      } else {
+        document.getElementById('shared-events-panel').innerHTML = emptyMsg('Shared reaction data unavailable.');
+      }
+
+      // Co-administration
+      renderCoAdmin(coAdmin, drugA, drugB);
+
+      // Data Graphs tab
+      renderSerious('a', seriousA, drugA);
+      renderSerious('b', seriousB, drugB);
+      renderOutcomes('a', outcomesA, drugA);
+      renderOutcomes('b', outcomesB, drugB);
+      renderSex('a', sexA, drugA);
+      renderSex('b', sexB, drugB);
+
+    } catch (err) {
+      ['interactions','warnings','events','recalls','serious','outcomes','sex'].forEach(tab => {
+        ['a','b'].forEach(side => {
+          document.getElementById(`body-${tab}-${side}`).innerHTML =
+            errorBlock('Network error. Please check your connection.', () => compare(lastDrugA, lastDrugB));
+        });
+      });
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Compare →';
+  }
+
+  /* ── Compare button ── */
+  document.getElementById('compare-btn').addEventListener('click', () => {
+    const a = document.getElementById('select-a').value;
+    const b = document.getElementById('select-b').value;
+    if (!a || !b) {
+      alert('Please select both drugs from the dropdowns.');
+      return;
+    }
+    compare(a, b);
+  });
+
+  /* ── Pre-populate on load ── */
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('select-a').value = 'warfarin';
+    document.getElementById('select-b').value = 'ibuprofen';
+    compare('warfarin', 'ibuprofen');
+  });
+</script>
+</body>
+</html>
