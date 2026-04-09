@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Switchboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080c12;
+      --bg-side:   #0f1520;
+      --bg-card:   #161d2a;
+      --bg-in:     #080c12;
+      --b:         #3d4752;
+      --b-sub:     #252d3a;
+      --t:         #f0f6fc;
+      --t2:        #a0aab8;
+      --t3:        #6e7a8a;
+      --ac:        #58a6ff;
+      --ac2:       #91c2ff;
+      --ok:        #4ade80;
+      --warn:      #fbbf24;
+      --err:       #f87171;
+      --dot-off:   #3d4752;
+      --mono:      'JetBrains Mono', 'Fira Code', monospace;
+      --sans:      'Inter', system-ui, sans-serif;
+      --sw:        310px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--t); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+
+    /* ── Layout ── */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    .sidebar {
+      width: var(--sw); min-width: var(--sw);
+      background: var(--bg-side);
+      border-right: 1px solid var(--b);
+      display: flex; flex-direction: column;
+      overflow-y: auto; flex-shrink: 0;
+    }
+
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    /* ── Sidebar pieces ── */
+    .s-head { padding: 22px 18px 16px; border-bottom: 1px solid var(--b-sub); }
+    .s-head h1 { font-size: 22px; font-weight: 700; letter-spacing: .01em; }
+    .s-head p  { font-size: 13px; color: var(--t3); margin-top: 4px; }
+
+    .s-sec { padding: 16px 18px; border-bottom: 1px solid var(--b-sub); }
+
+    .s-lbl {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: var(--t3); margin-bottom: 12px;
+    }
+
+    .key-row { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+    .key-row:last-of-type { margin-bottom: 0; }
+
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dot-off); flex-shrink: 0; transition: background .2s; }
+    .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+    .key-lbl { font-size: 13px; color: var(--t2); width: 74px; flex-shrink: 0; }
+
+    .key-inp {
+      flex: 1; background: var(--bg-in); border: 1px solid var(--b);
+      border-radius: 5px; padding: 7px 10px;
+      font-family: var(--mono); font-size: 12px; color: var(--t);
+      outline: none; transition: border-color .15s;
+    }
+    .key-inp:focus { border-color: var(--ac); }
+    .key-inp::placeholder { color: var(--t3); }
+
+    .key-note { font-size: 11px; color: var(--t3); margin-top: 10px; line-height: 1.5; }
+
+    .upload-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+    .btn-upload {
+      flex: 1; padding: 7px 12px; background: transparent;
+      border: 1px dashed var(--b); border-radius: 5px;
+      font-family: var(--sans); font-size: 13px; color: var(--t2);
+      cursor: pointer; transition: all .15s; text-align: center;
+    }
+    .btn-upload:hover { border-color: var(--ac); color: var(--ac); }
+    .upload-ok { font-size: 12px; color: var(--ok); display: none; }
+
+    .tmpl-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .tmpl-chip {
+      padding: 4px 11px; border: 1px solid var(--b);
+      border-radius: 100px; font-size: 12px; color: var(--t3);
+      cursor: pointer; background: transparent; transition: all .15s;
+    }
+    .tmpl-chip:hover { border-color: var(--ac); color: var(--ac); }
+
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      padding: 8px 16px; border: 1px solid var(--b);
+      border-radius: 6px; font-size: 14px; font-weight: 500;
+      color: var(--t2); cursor: pointer; background: transparent;
+      transition: all .15s; user-select: none;
+    }
+    .chip:hover { border-color: var(--ac); color: var(--ac); }
+    .chip.on  { border-color: var(--ac); color: var(--ac); background: rgba(88,166,255,.12); }
+
+    /* Smaller chips specifically for output mode (so they fit side-by-side) */
+    #mode-chips .chip { padding: 5px 10px; font-size: 12px; border-radius: 4px; }
+
+    /* Schema panel in main content */
+    .schema-panel { border: 1px solid var(--b); border-radius: 7px; overflow: hidden; }
+    .schema-panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 15px; background: var(--bg-card); border-bottom: 1px solid var(--b);
+    }
+    .schema-panel-body { padding: 14px 15px; background: var(--bg-in); }
+
+    .sel {
+      width: 100%; background: var(--bg-in); border: 1px solid var(--b);
+      border-radius: 5px; padding: 8px 30px 8px 10px;
+      font-family: var(--sans); font-size: 14px; color: var(--t);
+      outline: none; cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a0aab8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+    }
+    .sel:focus { border-color: var(--ac); }
+    .sel option { background: var(--bg-card); }
+
+    .schema-ta {
+      width: 100%; background: var(--bg-in); border: 1px solid var(--b);
+      border-radius: 5px; padding: 7px 8px;
+      font-family: var(--mono); font-size: 10px; color: var(--t);
+      resize: vertical; min-height: 54px; max-height: 90px;
+      outline: none; line-height: 1.4;
+    }
+    .schema-ta:focus { border-color: var(--ac); }
+    .schema-ta::placeholder { color: var(--t3); }
+
+    /* ── Main header ── */
+    .m-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-bottom: 1px solid var(--b-sub); flex-shrink: 0;
+    }
+    .m-badges { display: flex; align-items: center; gap: 10px; }
+    .b-model {
+      font-family: var(--mono); font-size: 13px; color: var(--t2);
+      background: var(--bg-card); border: 1px solid var(--b);
+      border-radius: 5px; padding: 3px 10px;
+    }
+    .b-mode { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--t3); }
+    .kbd-hint { font-size: 12px; color: var(--t3); }
+
+    /* ── Main body ── */
+    .m-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* Example chips */
+    .ex-row { display: flex; gap: 7px; flex-wrap: wrap; }
+    .ex-chip {
+      padding: 5px 13px; border: 1px solid var(--b);
+      border-radius: 100px; font-size: 13px; color: var(--t2);
+      cursor: pointer; background: transparent; transition: all .15s; white-space: nowrap;
+    }
+    .ex-chip:hover { border-color: var(--ac); color: var(--ac); background: rgba(88,166,255,.06); }
+
+    /* Prompt */
+    .p-wrap { position: relative; }
+    .p-ta {
+      width: 100%; background: var(--bg-card); border: 1px solid var(--b);
+      border-radius: 7px; padding: 14px 14px 32px;
+      font-family: var(--mono); font-size: 15px; color: var(--t);
+      resize: none; outline: none; line-height: 1.6; overflow: hidden;
+      min-height: 110px; transition: border-color .15s;
+    }
+    .p-ta:focus { border-color: var(--ac); }
+    .p-ta::placeholder { color: var(--t3); }
+    .char-ct { position: absolute; bottom: 10px; right: 13px; font-size: 12px; color: var(--t3); font-family: var(--mono); pointer-events: none; }
+
+    /* Actions */
+    .act { display: flex; align-items: center; gap: 10px; }
+    .btn-send {
+      padding: 10px 22px; background: var(--ac); border: none;
+      border-radius: 6px; font-family: var(--sans); font-size: 15px;
+      font-weight: 600; color: #080c12; cursor: pointer;
+      transition: background .15s, opacity .15s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .btn-send:hover:not(:disabled) { background: var(--ac2); }
+    .btn-send:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-sec {
+      padding: 10px 16px; background: transparent; border: 1px solid var(--b);
+      border-radius: 6px; font-family: var(--sans); font-size: 14px;
+      color: var(--t2); cursor: pointer; transition: all .15s;
+    }
+    .btn-sec:hover { border-color: var(--t2); color: var(--t); }
+
+    .spin {
+      width: 11px; height: 11px;
+      border: 2px solid rgba(13,17,23,.3); border-top-color: #0d1117;
+      border-radius: 50%; animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Panels */
+    .panel { border: 1px solid var(--b); border-radius: 7px; overflow: hidden; }
+    .p-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 15px; background: var(--bg-card);
+      border-bottom: 1px solid var(--b);
+    }
+    .p-title { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--t3); }
+    .p-body { padding: 15px; background: var(--bg-in); max-height: 420px; overflow-y: auto; }
+
+    .out-empty { color: var(--t3); font-size: 14px; font-style: italic; }
+    .out-text  { font-family: var(--mono); font-size: 14px; color: var(--t); white-space: pre-wrap; word-break: break-word; line-height: 1.65; }
+    .out-err   { font-size: 14px; color: var(--err); font-family: var(--mono); margin-bottom: 8px; }
+
+    /* JSON highlight */
+    .jk { color: #79b8ff; }
+    .jv { color: #a5d6ff; }
+    .jn { color: #f8e3a1; }
+    .jb { color: #f97583; }
+    .jl { color: #6a737d; }
+
+    /* Metrics */
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .m-card {
+      background: #130d2a;
+      border: 1px solid #5b21b6;
+      border-radius: 7px; padding: 13px 14px;
+      box-shadow: 0 0 18px rgba(109,40,217,.18);
+    }
+    .m-lbl { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #a78bfa; margin-bottom: 5px; }
+    .m-val { font-family: var(--mono); font-size: 18px; font-weight: 600; color: #ede9fe; line-height: 1.2; }
+    .m-sub { font-size: 11px; color: #7c5cbf; margin-top: 3px; }
+
+    /* View containers */
+    .view { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Validator */
+    .val-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 15px; background: var(--bg-card);
+      border-bottom: 1px solid var(--b);
+      cursor: pointer; user-select: none;
+    }
+    .val-head:hover { background: rgba(255,255,255,.02); }
+    .val-sum { font-size: 13px; color: var(--t2); }
+    .chev { transition: transform .2s; color: var(--t3); font-size: 12px; }
+    .chev.up { transform: rotate(-90deg); }
+    .val-body { padding: 10px 15px; background: var(--bg-in); }
+    .v-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--b-sub); font-size: 14px; }
+    .v-row:last-child { border-bottom: none; }
+    .v-ico { width: 17px; height: 17px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+    .v-ico.ok   { background: rgba(74,222,128,.18);  color: var(--ok);   }
+    .v-ico.warn { background: rgba(251,191,36,.18);  color: var(--warn); }
+    .v-ico.bad  { background: rgba(248,113,113,.18); color: var(--err);  }
+    .v-field { font-family: var(--mono); color: var(--t); flex: 1; }
+    .v-note  { color: var(--t3); font-size: 13px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--b); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--t3); }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 780px) {
+      .app { flex-direction: column; }
+      .sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--b); max-height: 44vh; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="s-head">
+      <h1>LLM Switchboard</h1>
+      <p>OpenAI &amp; Anthropic side-by-side</p>
+    </div>
+
+    <div class="s-sec">
+      <div class="s-lbl">API Keys</div>
+      <div class="key-row">
+        <div class="dot" id="dot-oai"></div>
+        <span class="key-lbl">OpenAI</span>
+        <input class="key-inp" type="password" id="key-oai" placeholder="sk-…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="key-row">
+        <div class="dot" id="dot-ant"></div>
+        <span class="key-lbl">Anthropic</span>
+        <input class="key-inp" type="password" id="key-ant" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      </div>
+      <p class="key-note">Keys held in memory only — never stored or transmitted beyond the provider APIs.</p>
+    </div>
+
+    <div class="s-sec">
+      <div class="s-lbl">Provider</div>
+      <div class="chips" id="prov-chips">
+        <button class="chip on" data-p="openai">OpenAI</button>
+        <button class="chip"    data-p="anthropic">Anthropic</button>
+      </div>
+    </div>
+
+    <div class="s-sec">
+      <div class="s-lbl">Model</div>
+      <select class="sel" id="model-sel"></select>
+    </div>
+
+    <div class="s-sec">
+      <div class="s-lbl">Output Mode</div>
+      <div class="chips" id="mode-chips">
+        <button class="chip on" data-m="text">Unstructured</button>
+        <button class="chip"    data-m="json">Structured</button>
+      </div>
+    </div>
+
+    <div class="s-sec hidden" id="schema-sec">
+      <div class="s-lbl">JSON Schema</div>
+      <div class="tmpl-row" id="tmpl-row"></div>
+      <textarea class="schema-ta" id="schema-ta"
+        placeholder='{"type":"object","properties":{"name":{"type":"string"},"age":{"type":"number"}},"required":["name","age"]}'></textarea>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+    <div class="m-head">
+      <div class="m-badges">
+        <span class="b-model" id="b-model">gpt-4o</span>
+        <span class="b-mode"  id="b-mode">Unstructured</span>
+      </div>
+      <span class="kbd-hint">⌘ / Ctrl+Enter to send</span>
+    </div>
+
+    <div class="m-body">
+
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:-8px">Example Prompts:</div>
+      <div class="ex-row" id="ex-row"></div>
+
+      <div class="p-wrap">
+        <textarea class="p-ta" id="p-ta" placeholder="Enter your prompt here…" rows="4"></textarea>
+        <span class="char-ct" id="char-ct">0</span>
+      </div>
+
+      <div class="act">
+        <button class="btn-send" id="btn-send">Send</button>
+        <button class="btn-sec"  id="btn-clear">Clear</button>
+      </div>
+
+      <!-- ── View: Unstructured (text) ── -->
+      <div class="view" id="view-text">
+        <div class="panel">
+          <div class="p-head">
+            <span class="p-title">Response</span>
+            <span id="out-status-text" style="font-size:11px;color:var(--t3)"></span>
+          </div>
+          <div class="p-body" id="out-body-text">
+            <span class="out-empty">Response will appear here.</span>
+          </div>
+        </div>
+        <div class="metrics hidden" id="metrics-text">
+          <div class="m-card">
+            <div class="m-lbl">Response Time</div>
+            <div class="m-val" id="m-time-text">—</div>
+            <div class="m-sub">seconds</div>
+          </div>
+          <div class="m-card">
+            <div class="m-lbl">Tokens</div>
+            <div class="m-val" id="m-tok-text">—</div>
+            <div class="m-sub" id="m-tok-sub-text">in / out</div>
+          </div>
+          <div class="m-card">
+            <div class="m-lbl">Est. Cost</div>
+            <div class="m-val" id="m-cost-text">—</div>
+            <div class="m-sub">USD</div>
+          </div>
+          <div class="m-card">
+            <div class="m-lbl">Length</div>
+            <div class="m-val" id="m-len-text">—</div>
+            <div class="m-sub">characters</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── View: Structured (JSON) ── -->
+      <div class="view hidden" id="view-json">
+        <div class="panel">
+          <div class="p-head">
+            <span class="p-title">Response (JSON)</span>
+            <span id="out-status-json" style="font-size:11px;color:var(--t3)"></span>
+          </div>
+          <div class="p-body" id="out-body-json">
+            <span class="out-empty">JSON response will appear here.</span>
+          </div>
+        </div>
+        <div class="metrics hidden" id="metrics-json">
+          <div class="m-card">
+            <div class="m-lbl">Response Time</div>
+            <div class="m-val" id="m-time-json">—</div>
+            <div class="m-sub">seconds</div>
+          </div>
+          <div class="m-card">
+            <div class="m-lbl">Tokens</div>
+            <div class="m-val" id="m-tok-json">—</div>
+            <div class="m-sub" id="m-tok-sub-json">in / out</div>
+          </div>
+          <div class="m-card">
+            <div class="m-lbl">Est. Cost</div>
+            <div class="m-val" id="m-cost-json">—</div>
+            <div class="m-sub">USD</div>
+          </div>
+          <div class="m-card">
+            <div class="m-lbl">Length</div>
+            <div class="m-val" id="m-len-json">—</div>
+            <div class="m-sub">characters</div>
+          </div>
+        </div>
+        <div class="panel hidden" id="val-panel">
+          <div class="val-head" id="val-toggle">
+            <span class="p-title">Schema Validator</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="val-sum" id="val-sum"></span>
+              <span class="chev" id="val-chev">▼</span>
+            </div>
+          </div>
+          <div class="val-body" id="val-body"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+
+const MODELS = {
+  openai:    ['gpt-4o','gpt-5','gpt-5-mini','gpt-4o-mini','gpt-4-turbo','gpt-3.5-turbo','o1','o1-mini','o3-mini'],
+  anthropic: ['claude-opus-4-5','claude-sonnet-4-5','claude-opus-4-6','claude-sonnet-4-6',
+              'claude-haiku-4-5-20251001','claude-3-5-sonnet-20241022','claude-3-5-haiku-20241022','claude-3-opus-20240229'],
+};
+
+// USD per 1M tokens { i: input, o: output }
+const PRICING = {
+  openai: {
+    'gpt-5':         {i:10.00, o:40.00},
+    'gpt-5-mini':    {i:1.50,  o:6.00},
+    'gpt-4o':        {i:2.50,  o:10.00},
+    'gpt-4o-mini':   {i:0.15,  o:0.60},
+    'gpt-4-turbo':   {i:10.00, o:30.00},
+    'gpt-3.5-turbo': {i:0.50,  o:1.50},
+    'o1':            {i:15.00, o:60.00},
+    'o1-mini':       {i:3.00,  o:12.00},
+    'o3-mini':       {i:1.10,  o:4.40},
+  },
+  anthropic: {
+    'claude-opus-4-5':            {i:15.00, o:75.00},
+    'claude-sonnet-4-5':          {i:3.00,  o:15.00},
+    'claude-opus-4-6':            {i:15.00, o:75.00},
+    'claude-sonnet-4-6':          {i:3.00,  o:15.00},
+    'claude-haiku-4-5-20251001':  {i:0.80,  o:4.00},
+    'claude-3-5-sonnet-20241022': {i:3.00,  o:15.00},
+    'claude-3-5-haiku-20241022':  {i:0.80,  o:4.00},
+    'claude-3-opus-20240229':     {i:15.00, o:75.00},
+  }
+};
+
+const SCHEMA_TEMPLATES = [
+  {l:'User Profile', s:'{"type":"object","properties":{"name":{"type":"string"},"age":{"type":"number"},"email":{"type":"string"}},"required":["name","email"]}'},
+  {l:'Product',      s:'{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"price":{"type":"number"},"inStock":{"type":"boolean"}},"required":["id","name","price"]}'},
+  {l:'Weather',      s:'{"type":"object","properties":{"city":{"type":"string"},"temp":{"type":"number"},"conditions":{"type":"string"},"humidity":{"type":"number"}},"required":["city","temp","conditions"]}'},
+  {l:'Article',      s:'{"type":"object","properties":{"title":{"type":"string"},"author":{"type":"string"},"summary":{"type":"string"},"tags":{"type":"array"}},"required":["title","author","summary"]}'},
+];
+
+const EXAMPLES = [
+  {l:'Quantum entanglement', p:'Explain quantum entanglement in simple terms.'},
+  {l:'Flatten list (Python)', p:'Write a Python function to flatten a nested list.'},
+  {l:'REST vs GraphQL',       p:'Summarize the key differences between REST and GraphQL.'},
+  {l:'SQL vs NoSQL',          p:'What are the trade-offs between SQL and NoSQL databases?'},
+  {l:'French Revolution',     p:'Give me a one-sentence summary of the French Revolution.'},
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+const S = {
+  provider: 'openai',
+  model:    'gpt-4o',
+  mode:     'text',      // 'text' | 'json'
+  loading:  false,
+  valOpen:  true,
+};
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+
+const g = id => document.getElementById(id);
+
+const dotOai    = g('dot-oai'),    dotAnt    = g('dot-ant');
+const keyOai    = g('key-oai'),    keyAnt    = g('key-ant');
+const modelSel  = g('model-sel');
+const pTa       = g('p-ta'),       charCt    = g('char-ct');
+const btnSend   = g('btn-send'),   btnClear  = g('btn-clear');
+const viewText  = g('view-text'),  viewJson  = g('view-json');
+const outBodyTx = g('out-body-text'), outBodyJs = g('out-body-json');
+const metricsTx = g('metrics-text'),  metricsJs = g('metrics-json');
+const valPanel  = g('val-panel'),  valBody   = g('val-body');
+const valSum    = g('val-sum'),    valChev   = g('val-chev');
+const valToggle = g('val-toggle');
+const schemaSec = g('schema-sec'), schemaTa = g('schema-ta');
+const bModel    = g('b-model'),    bMode     = g('b-mode');
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+function init() {
+  // Example prompt chips
+  const exRow = g('ex-row');
+  EXAMPLES.forEach(({l, p}) => {
+    const b = document.createElement('button');
+    b.className = 'ex-chip';
+    b.textContent = l;
+    b.onclick = () => { pTa.value = p; charCt.textContent = p.length; autoH(); pTa.focus(); };
+    exRow.appendChild(b);
+  });
+
+  // Schema template chips
+  const tmplRow = g('tmpl-row');
+  SCHEMA_TEMPLATES.forEach(({l, s}) => {
+    const b = document.createElement('button');
+    b.className = 'tmpl-chip';
+    b.textContent = l;
+    b.onclick = () => { schemaTa.value = s; schemaTa.focus(); };
+    tmplRow.appendChild(b);
+  });
+
+  populateModels();
+  bind();
+}
+
+function setProvider(p) {
+  S.provider = p;
+  g('prov-chips').querySelectorAll('.chip').forEach(c => {
+    c.classList.toggle('on', c.dataset.p === p);
+  });
+  populateModels();
+}
+
+function populateModels() {
+  modelSel.innerHTML = '';
+  MODELS[S.provider].forEach(m => {
+    const o = document.createElement('option');
+    o.value = o.textContent = m;
+    modelSel.appendChild(o);
+  });
+  S.model = MODELS[S.provider][0];
+  modelSel.value = S.model;
+  bModel.textContent = S.model;
+}
+
+// ── Bindings ──────────────────────────────────────────────────────────────────
+
+function bind() {
+  keyOai.oninput = () => dotOai.classList.toggle('on', !!keyOai.value.trim());
+  keyAnt.oninput = () => dotAnt.classList.toggle('on', !!keyAnt.value.trim());
+
+  g('prov-chips').querySelectorAll('.chip').forEach(c => {
+    c.onclick = () => { setProvider(c.dataset.p); };
+  });
+
+  modelSel.onchange = () => { S.model = modelSel.value; bModel.textContent = S.model; };
+
+  g('mode-chips').querySelectorAll('.chip').forEach(c => {
+    c.onclick = () => {
+      g('mode-chips').querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+      S.mode = c.dataset.m;
+      viewText.classList.toggle('hidden', S.mode !== 'text');
+      viewJson.classList.toggle('hidden', S.mode !== 'json');
+      schemaSec.classList.toggle('hidden', S.mode !== 'json');
+      bMode.textContent = S.mode === 'json' ? 'Structured' : 'Unstructured';
+    };
+  });
+
+  pTa.oninput  = () => { charCt.textContent = pTa.value.length; autoH(); };
+  btnSend.onclick  = send;
+  btnClear.onclick = clearAll;
+
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (!S.loading) send();
+    }
+  });
+
+  valToggle.onclick = () => {
+    S.valOpen = !S.valOpen;
+    valBody.classList.toggle('hidden', !S.valOpen);
+    valChev.classList.toggle('up', !S.valOpen);
+  };
+}
+
+function autoH() {
+  pTa.style.height = 'auto';
+  pTa.style.height = Math.min(pTa.scrollHeight, 320) + 'px';
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+
+async function send() {
+  const prompt = pTa.value.trim();
+  if (!prompt) return;
+  const key = (S.provider === 'openai' ? keyOai : keyAnt).value.trim();
+  if (!key) {
+    const name = S.provider === 'openai' ? 'OpenAI' : 'Anthropic';
+    showTextErr(`No ${name} API key entered.`);
+    showJsonErr(`No ${name} API key entered.`);
+    return;
+  }
+
+  setLoading(true);
+
+  const callFn = S.provider === 'openai' ? callOAI : callAnt;
+
+  const timed = async (mode) => {
+    const t0 = performance.now();
+    const result = await callFn(key, prompt, mode);
+    return { result, elapsed: (performance.now() - t0) / 1000 };
+  };
+
+  const [textRes, jsonRes] = await Promise.allSettled([timed('text'), timed('json')]);
+
+  if (textRes.status === 'fulfilled') {
+    displayText(textRes.value.result, textRes.value.elapsed);
+  } else {
+    showTextErr(textRes.reason?.message || 'Request failed.');
+  }
+
+  if (jsonRes.status === 'fulfilled') {
+    displayJson(jsonRes.value.result, jsonRes.value.elapsed);
+  } else {
+    showJsonErr(jsonRes.reason?.message || 'Request failed.');
+  }
+
+  setLoading(false);
+}
+
+async function callOAI(key, prompt, mode) {
+  const body = { model: S.model, messages: [{role:'user', content:prompt}] };
+
+  if (mode === 'json') {
+    // OpenAI requires "json" to appear in messages when using json_object mode.
+    body.messages = [
+      { role: 'system', content: 'Respond with valid JSON only. No prose, no markdown, no code fences.' },
+      { role: 'user',   content: prompt }
+    ];
+    body.response_format = { type: 'json_object' };
+  }
+
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error?.message || `HTTP ${r.status}`);
+  return {
+    text:  d.choices[0].message.content,
+    usage: { i: d.usage?.prompt_tokens, o: d.usage?.completion_tokens },
+  };
+}
+
+async function callAnt(key, prompt, mode) {
+  const body = { model: S.model, max_tokens: 4096, messages: [{role:'user', content:prompt}] };
+
+  if (mode === 'json') {
+    body.system = 'You must respond with ONLY a raw JSON object. No explanation, no markdown, no code fences. Output must be valid JSON that can be passed directly to JSON.parse().';
+  }
+
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key':    key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error?.message || `HTTP ${r.status}`);
+  // Strip markdown fences in case the model wraps output anyway
+  const text = stripFences(d.content[0].text);
+  return {
+    text,
+    usage: { i: d.usage?.input_tokens, o: d.usage?.output_tokens },
+  };
+}
+
+// ── Display ───────────────────────────────────────────────────────────────────
+
+function displayText({text, usage}, elapsed) {
+  outBodyTx.innerHTML = `<div class="out-text">${esc(text)}</div>`;
+  renderMetrics('text', usage, elapsed, text);
+}
+
+function displayJson({text, usage}, elapsed) {
+  valPanel.classList.add('hidden');
+  try {
+    const obj    = JSON.parse(stripFences(text));
+    const pretty = JSON.stringify(obj, null, 2);
+    outBodyJs.innerHTML = `<pre class="out-text" style="overflow:auto;max-height:340px">${hlJson(pretty)}</pre>`;
+    const raw = schemaTa.value.trim();
+    if (raw) {
+      try { runValidator(obj, JSON.parse(raw)); } catch (_) { /* bad schema */ }
+    }
+  } catch {
+    outBodyJs.innerHTML =
+      `<div class="out-err">⚠ Response is not valid JSON</div>` +
+      `<pre class="out-text">${esc(text)}</pre>`;
+  }
+  renderMetrics('json', usage, elapsed, text);
+}
+
+function renderMetrics(suffix, usage, elapsed, text) {
+  const p    = PRICING[S.provider]?.[S.model];
+  const cost = (p && usage.i != null && usage.o != null)
+    ? (usage.i / 1e6 * p.i + usage.o / 1e6 * p.o) : null;
+  const total = (usage.i ?? 0) + (usage.o ?? 0);
+
+  g(`m-time-${suffix}`).textContent    = elapsed.toFixed(2);
+  g(`m-tok-${suffix}`).textContent     = total > 0 ? total.toLocaleString() : '—';
+  g(`m-tok-sub-${suffix}`).textContent = usage.i != null
+    ? `${usage.i.toLocaleString()} in / ${(usage.o ?? 0).toLocaleString()} out`
+    : 'in / out';
+  g(`m-cost-${suffix}`).textContent    = cost != null ? `$${cost.toFixed(5)}` : '—';
+  g(`m-len-${suffix}`).textContent     = text.length.toLocaleString();
+  g(`metrics-${suffix}`).classList.remove('hidden');
+}
+
+function runValidator(data, schema) {
+  const rows = [];
+  if (schema.properties) {
+    for (const [key, ps] of Object.entries(schema.properties)) {
+      const required = schema.required?.includes(key);
+      if (!(key in data)) {
+        if (required) rows.push({field:key, status:'bad',  note:'missing (required)'});
+      } else {
+        const at = jsonType(data[key]);
+        if (ps.type && at !== ps.type) {
+          rows.push({field:key, status:'warn', note:`expected ${ps.type}, got ${at}`});
+        } else {
+          rows.push({field:key, status:'ok',   note:at});
+        }
+      }
+    }
+  }
+  const good = rows.filter(r => r.status === 'ok').length;
+  valSum.textContent = `${good} / ${rows.length} fields valid`;
+  valSum.style.color = good === rows.length ? 'var(--ok)' : 'var(--warn)';
+
+  const ico = {ok:'✓', warn:'!', bad:'✗'};
+  valBody.innerHTML = rows.map(r =>
+    `<div class="v-row">
+      <div class="v-ico ${r.status}">${ico[r.status]}</div>
+      <div class="v-field">${esc(r.field)}</div>
+      <div class="v-note">${esc(r.note)}</div>
+    </div>`
+  ).join('');
+
+  valPanel.classList.remove('hidden');
+  valBody.classList.toggle('hidden', !S.valOpen);
+  valChev.classList.toggle('up', !S.valOpen);
+}
+
+function setLoading(on) {
+  S.loading = on;
+  btnSend.disabled = on;
+  btnSend.innerHTML = on
+    ? '<div class="spin"></div><span>Sending…</span>'
+    : 'Send';
+  if (on) {
+    outBodyTx.innerHTML = '<span class="out-empty" style="color:var(--ac)">Waiting for response…</span>';
+    outBodyJs.innerHTML = '<span class="out-empty" style="color:var(--ac)">Waiting for response…</span>';
+    metricsTx.classList.add('hidden');
+    metricsJs.classList.add('hidden');
+    valPanel.classList.add('hidden');
+  }
+}
+
+function showTextErr(msg) {
+  outBodyTx.innerHTML = `<div class="out-err">Error: ${esc(msg)}</div>`;
+}
+
+function showJsonErr(msg) {
+  outBodyJs.innerHTML = `<div class="out-err">Error: ${esc(msg)}</div>`;
+}
+
+function clearAll() {
+  pTa.value = '';
+  pTa.style.height = '';
+  charCt.textContent = '0';
+  outBodyTx.innerHTML = '<span class="out-empty">Response will appear here.</span>';
+  outBodyJs.innerHTML = '<span class="out-empty">JSON response will appear here.</span>';
+  metricsTx.classList.add('hidden');
+  metricsJs.classList.add('hidden');
+  valPanel.classList.add('hidden');
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function jsonType(v) {
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return 'array';
+  return typeof v;
+}
+
+// Recursively prepare a JSON schema for OpenAI strict mode:
+// adds additionalProperties:false and puts every property key into required[]
+function strictifySchema(schema) {
+  if (!schema || typeof schema !== 'object') return schema;
+  const s = { ...schema };
+  if (s.type === 'object' && s.properties) {
+    s.additionalProperties = false;
+    s.required = Object.keys(s.properties);
+    s.properties = Object.fromEntries(
+      Object.entries(s.properties).map(([k, v]) => [k, strictifySchema(v)])
+    );
+  }
+  if (s.type === 'array' && s.items) {
+    s.items = strictifySchema(s.items);
+  }
+  return s;
+}
+
+// Strip markdown code fences that some models wrap JSON in
+function stripFences(text) {
+  return text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+}
+
+// Parse a key from .env or CSV text
+// .env:  OPENAI_API_KEY=sk-...  or  OPENAI_API_KEY="sk-..."
+// CSV:   openai,sk-...
+function parseKey(text, labels) {
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    // .env style
+    for (const lbl of labels) {
+      const envMatch = trimmed.match(new RegExp(`^${lbl}\\s*=\\s*["']?([^"'\\s]+)["']?`, 'i'));
+      if (envMatch) return envMatch[1];
+    }
+    // CSV style: first col matches label, second col is key
+    const parts = trimmed.split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
+    if (parts.length >= 2 && labels.some(l => l.toLowerCase() === parts[0].toLowerCase())) {
+      return parts[1];
+    }
+  }
+  return null;
+}
+
+// Character-by-character JSON highlighter (no external deps)
+function hlJson(raw) {
+  let out = '';
+  let i = 0;
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (ch === '"') {
+      // Collect full string token
+      let s = '';
+      i++;
+      while (i < raw.length) {
+        const c = raw[i];
+        if (c === '\\' && i + 1 < raw.length) {
+          s += c + raw[i + 1];
+          i += 2;
+        } else if (c === '"') {
+          i++;
+          break;
+        } else {
+          s += c;
+          i++;
+        }
+      }
+      // Determine if key (next non-ws char is ':')
+      let j = i;
+      while (j < raw.length && /\s/.test(raw[j])) j++;
+      const isKey = raw[j] === ':';
+      out += `<span class="${isKey ? 'jk' : 'jv'}">"${esc(s)}"</span>`;
+    } else if (raw.startsWith('true', i)) {
+      out += `<span class="jb">true</span>`;  i += 4;
+    } else if (raw.startsWith('false', i)) {
+      out += `<span class="jb">false</span>`; i += 5;
+    } else if (raw.startsWith('null', i)) {
+      out += `<span class="jl">null</span>`;  i += 4;
+    } else if (ch === '-' || (ch >= '0' && ch <= '9')) {
+      let num = '';
+      while (i < raw.length && /[-+0-9.eE]/.test(raw[i])) num += raw[i++];
+      out += `<span class="jn">${esc(num)}</span>`;
+    } else {
+      out += esc(ch);
+      i++;
+    }
+  }
+  return out;
+}
+
+init();
+</script>
+</body>
+</html>
