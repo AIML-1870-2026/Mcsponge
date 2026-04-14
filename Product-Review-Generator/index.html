@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Review Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080c12;
+      --bg-side: #0f1520;
+      --bg-card: #161d2a;
+      --bg-in:   #080c12;
+      --b:       #3d4752;
+      --b-sub:   #252d3a;
+      --t:       #f0f6fc;
+      --t2:      #a0aab8;
+      --t3:      #6e7a8a;
+      --ac:      #58a6ff;
+      --ac2:     #91c2ff;
+      --ok:      #4ade80;
+      --err:     #f87171;
+      --sw:      345px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--t);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    .sidebar {
+      width: var(--sw);
+      min-width: var(--sw);
+      background: var(--bg-side);
+      border-right: 1px solid var(--b);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    /* ── Main title banner ── */
+    .m-title {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--b-sub);
+      flex-shrink: 0;
+    }
+    .m-title h1 { font-size: 22px; font-weight: 700; letter-spacing: .01em; }
+    .m-title p  { font-size: 13px; color: var(--t3); margin-top: 3px; }
+
+    /* ── Sidebar sections ── */
+    .s-sec { padding: 14px 18px; border-bottom: 1px solid var(--b-sub); }
+
+    .s-lbl {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--t3);
+      margin-bottom: 10px;
+    }
+
+    /* ── Form fields ── */
+    .f-group { margin-bottom: 10px; }
+    .f-group:last-child { margin-bottom: 0; }
+    .f-label { font-size: 12px; color: var(--t2); margin-bottom: 5px; display: block; }
+
+    .inp, .sel, .ta {
+      width: 100%;
+      background: var(--bg-in);
+      border: 1px solid var(--b);
+      border-radius: 5px;
+      padding: 8px 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--t);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .inp:focus, .sel:focus, .ta:focus { border-color: var(--ac); }
+    .inp::placeholder, .ta::placeholder { color: var(--t3); }
+
+    .sel {
+      padding-right: 30px;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a0aab8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    .sel option { background: var(--bg-card); }
+
+    .ta { resize: vertical; min-height: 76px; line-height: 1.5; }
+
+    .f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* ── API key area ── */
+    .key-row { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+    .dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--b);
+      flex-shrink: 0;
+      transition: background .2s;
+    }
+    .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .key-inp {
+      flex: 1;
+      background: var(--bg-in);
+      border: 1px solid var(--b);
+      border-radius: 5px;
+      padding: 7px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--t);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .key-inp:focus { border-color: var(--ac); }
+    .key-inp::placeholder { color: var(--t3); }
+    .key-note { font-size: 11px; color: var(--t3); margin-top: 8px; line-height: 1.5; }
+
+    .upload-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .btn-upload {
+      flex: 1;
+      padding: 7px 12px;
+      background: transparent;
+      border: 1px dashed var(--b);
+      border-radius: 5px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--t2);
+      cursor: pointer;
+      transition: all .15s;
+      text-align: center;
+      display: block;
+    }
+    .btn-upload:hover { border-color: var(--ac); color: var(--ac); }
+    .upload-ok { font-size: 12px; color: var(--ok); white-space: nowrap; }
+
+    /* ── Sentiment slider ── */
+    .sentiment-row { display: flex; align-items: center; gap: 12px; }
+    .sent-emoji {
+      font-size: 30px;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 36px;
+      text-align: center;
+      transition: transform .15s;
+    }
+    .sent-right { flex: 1; }
+    .sent-label { font-size: 12px; color: var(--t2); margin-bottom: 7px; font-weight: 500; }
+
+    .sent-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+      transition: background .1s;
+    }
+    .sent-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--ac);
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .sent-range::-webkit-slider-thumb:hover {
+      background: var(--ac2);
+      transform: scale(1.15);
+    }
+    .sent-range::-moz-range-thumb {
+      width: 16px; height: 16px;
+      border-radius: 50%; border: none;
+      background: var(--ac); cursor: pointer;
+    }
+    .sent-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--t3);
+      margin-top: 5px;
+    }
+
+    /* ── Generate button ── */
+    .s-footer { padding: 14px 18px 18px; }
+    .btn-gen {
+      width: 100%;
+      padding: 12px;
+      background: var(--ac);
+      border: none;
+      border-radius: 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: #080c12;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-gen:hover:not(:disabled) { background: var(--ac2); }
+    .btn-gen:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── Main header ── */
+    .m-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--b-sub);
+      flex-shrink: 0;
+    }
+    .m-info { display: flex; align-items: center; gap: 10px; }
+    .b-model {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--t2);
+      background: var(--bg-card);
+      border: 1px solid var(--b);
+      border-radius: 5px;
+      padding: 3px 10px;
+    }
+    .b-status { font-size: 12px; color: var(--t3); }
+
+    /* ── Main body ── */
+    .m-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Review panel ── */
+    .review-panel {
+      border: 1px solid var(--b);
+      border-radius: 7px;
+      overflow: hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 400px;
+    }
+
+    .rp-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 15px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--b);
+      flex-shrink: 0;
+    }
+    .rp-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--t3);
+    }
+
+    .btn-copy, .btn-download {
+      padding: 5px 14px;
+      background: var(--ac);
+      border: none;
+      border-radius: 5px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #080c12;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+    }
+    .btn-copy:hover, .btn-download:hover { background: var(--ac2); }
+    .btn-copy.copied { background: var(--ok); }
+
+    /* Download button row below the panel */
+    .review-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .rp-body { padding: 20px; overflow-y: auto; flex: 1; }
+
+    /* ── Review states ── */
+    .r-empty   { color: var(--t3); font-size: 14px; font-style: italic; }
+    .r-loading { display: flex; align-items: center; gap: 10px; color: var(--ac); font-size: 14px; }
+    .r-err     { color: var(--err); font-size: 14px; line-height: 1.6; }
+
+    /* ── Spinners ── */
+    .spin {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(88,166,255,.2);
+      border-top-color: var(--ac);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    .spin-btn {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(8,12,18,.25);
+      border-top-color: #080c12;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Markdown output styling ── */
+    .review-md { font-size: 15px; color: var(--t); line-height: 1.75; }
+    .review-md h1 { font-size: 1.45em; font-weight: 700; margin: 0 0 .55em; color: var(--t); }
+    .review-md h2 { font-size: 1.2em;  font-weight: 600; margin: 1.1em 0 .45em; color: var(--t); border-bottom: 1px solid var(--b-sub); padding-bottom: .3em; }
+    .review-md h3 { font-size: 1.05em; font-weight: 600; margin: 1em 0 .35em; color: var(--ac); }
+    .review-md p  { margin: .6em 0; }
+    .review-md ul, .review-md ol { margin: .5em 0 .5em 1.4em; }
+    .review-md li { margin: .25em 0; }
+    .review-md strong { color: var(--t); font-weight: 600; }
+    .review-md em     { color: var(--t2); }
+    .review-md hr     { border: none; border-top: 1px solid var(--b); margin: 1.1em 0; }
+    .review-md code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-card);
+      padding: .1em .35em;
+      border-radius: 3px;
+      font-size: .88em;
+      color: var(--ac2);
+    }
+    .review-md blockquote {
+      border-left: 3px solid var(--ac);
+      padding-left: 12px;
+      margin: .8em 0;
+      color: var(--t2);
+      font-style: italic;
+    }
+    .review-md > *:first-child { margin-top: 0; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar       { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--b); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--t3); }
+
+    .hidden { display: none !important; }
+
+    /* ── Mobile ── */
+    @media (max-width: 760px) {
+      .app { flex-direction: column; height: auto; overflow: auto; }
+      .sidebar { width: 100%; min-width: unset; }
+      .main { min-height: 520px; }
+      .f-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- API Key -->
+    <div class="s-sec">
+      <div class="s-lbl">OpenAI API Key</div>
+      <div class="key-row">
+        <div class="dot" id="dot-key"></div>
+        <input class="key-inp" type="password" id="key-inp"
+          placeholder="sk-…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="upload-row">
+        <label class="btn-upload" for="env-file">Upload .env file</label>
+        <input type="file" id="env-file" accept=".env,text/plain" style="display:none">
+        <span class="upload-ok hidden" id="upload-ok">✓ Key loaded</span>
+      </div>
+      <p class="key-note">Key held in memory only — never stored or transmitted beyond OpenAI.</p>
+    </div>
+
+    <!-- Product Information -->
+    <div class="s-sec">
+      <div class="s-lbl">Product Information</div>
+
+      <div class="f-group">
+        <label class="f-label" for="inp-name">Product Name *</label>
+        <input class="inp" type="text" id="inp-name"
+          placeholder="e.g. Sony WH-1000XM5 Headphones">
+      </div>
+
+      <div class="f-group">
+        <label class="f-label" for="sel-cat">Category</label>
+        <select class="sel" id="sel-cat">
+          <option value="Electronics">Electronics</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Food">Food</option>
+          <option value="Home">Home</option>
+          <option value="Sports">Sports</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="f-grid">
+        <div class="f-group">
+          <label class="f-label" for="sel-len">Length</label>
+          <select class="sel" id="sel-len">
+            <option value="short">Short</option>
+            <option value="medium" selected>Medium</option>
+            <option value="long">Long</option>
+          </select>
+        </div>
+        <div class="f-group">
+          <label class="f-label" for="sel-style">Style</label>
+          <select class="sel" id="sel-style">
+            <option value="conversational">Conversational</option>
+            <option value="formal">Formal</option>
+            <option value="humorous">Humorous</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <label class="f-label" for="ta-comments">Additional Comments</label>
+        <textarea class="ta" id="ta-comments" rows="3"
+          placeholder="Key features, strengths, weaknesses, or specific instructions…"></textarea>
+      </div>
+    </div>
+
+    <!-- Model & Sentiment -->
+    <div class="s-sec">
+      <div class="s-lbl">Model &amp; Sentiment</div>
+
+      <div class="f-group">
+        <label class="f-label" for="sel-model">Model</label>
+        <select class="sel" id="sel-model">
+          <option value="gpt-5" selected>gpt-5</option>
+          <option value="gpt-5-mini">gpt-5-mini</option>
+          <option value="gpt-4.5">gpt-4.5</option>
+          <option value="gpt-4.1">gpt-4.1</option>
+          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+          <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+          <option value="gpt-4o">gpt-4o</option>
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="o4-mini">o4-mini</option>
+          <option value="o3">o3</option>
+          <option value="o3-mini">o3-mini</option>
+          <option value="o1">o1</option>
+          <option value="o1-mini">o1-mini</option>
+          <option value="gpt-4-turbo">gpt-4-turbo</option>
+          <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+        </select>
+      </div>
+
+      <div class="f-group" style="margin-top:14px">
+        <div class="sentiment-row">
+          <div class="sent-emoji" id="sent-emoji">😐</div>
+          <div class="sent-right">
+            <div class="sent-label" id="sent-label">Neutral (50)</div>
+            <input type="range" class="sent-range" id="sent-slider" min="0" max="100" value="50">
+            <div class="sent-ticks">
+              <span>😡 Negative</span>
+              <span>Neutral</span>
+              <span>Positive 🤩</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generate -->
+    <div class="s-footer">
+      <button class="btn-gen" id="btn-gen">Generate Review</button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+    <div class="m-title">
+      <h1>Product Review Generator</h1>
+      <p>AI-powered product reviews via OpenAI</p>
+    </div>
+    <div class="m-head">
+      <div class="m-info">
+        <span class="b-model" id="b-model">gpt-5</span>
+        <span class="b-status" id="b-status"></span>
+      </div>
+      <span style="font-size:12px;color:var(--t3)">OpenAI · Markdown rendered</span>
+    </div>
+
+    <div class="m-body">
+      <div class="review-panel">
+        <div class="rp-head">
+          <span class="rp-title">Generated Review</span>
+          <button class="btn-copy hidden" id="btn-copy">Copy to Clipboard</button>
+        </div>
+        <div class="rp-body" id="rp-body">
+          <span class="r-empty">No review generated yet.</span>
+        </div>
+      </div>
+      <div class="review-actions">
+        <button class="btn-download hidden" id="btn-download">Download Review (.txt)</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Fallback model list (used before key is entered) ───────────────────────────
+const FALLBACK_MODELS = [
+  'gpt-5', 'gpt-5-mini',
+  'gpt-4.5',
+  'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano',
+  'gpt-4o', 'gpt-4o-mini',
+  'o4-mini', 'o3', 'o3-mini', 'o1', 'o1-mini',
+  'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo',
+];
+
+// ── State ──────────────────────────────────────────────────────────────────────
+const S = {
+  key:          '',
+  models:       FALLBACK_MODELS,
+  model:        'gpt-5',
+  loading:      false,
+  lastMarkdown: '',
+  modelsCached: false,
+};
+
+// ── DOM refs ───────────────────────────────────────────────────────────────────
+const g = id => document.getElementById(id);
+
+const dotKey    = g('dot-key');
+const keyInp    = g('key-inp');
+const envFile   = g('env-file');
+const uploadOk  = g('upload-ok');
+const selModel  = g('sel-model');
+const bModel    = g('b-model');
+const bStatus   = g('b-status');
+const inpName   = g('inp-name');
+const selCat    = g('sel-cat');
+const selLen    = g('sel-len');
+const selStyle  = g('sel-style');
+const taComm    = g('ta-comments');
+const sentSlider = g('sent-slider');
+const sentEmoji  = g('sent-emoji');
+const sentLabel  = g('sent-label');
+const btnGen    = g('btn-gen');
+const rpBody    = g('rp-body');
+const btnCopy     = g('btn-copy');
+const btnDownload = g('btn-download');
+
+// ── Sentiment ─────────────────────────────────────────────────────────────────
+function sentimentInfo(v) {
+  v = parseInt(v, 10);
+  if (v <= 10)  return { emoji: '😡', label: 'Very Negative',   desc: 'very negative' };
+  if (v <= 25)  return { emoji: '😠', label: 'Negative',        desc: 'negative' };
+  if (v <= 40)  return { emoji: '🙁', label: 'Mostly Negative', desc: 'mixed, leaning negative' };
+  if (v <= 60)  return { emoji: '😐', label: 'Neutral',         desc: 'neutral and balanced' };
+  if (v <= 75)  return { emoji: '🙂', label: 'Mostly Positive', desc: 'mostly positive' };
+  if (v <= 90)  return { emoji: '😊', label: 'Positive',        desc: 'positive' };
+  return         { emoji: '🤩', label: 'Very Positive',  desc: 'enthusiastic and very positive' };
+}
+
+function updateSentiment() {
+  const v    = parseInt(sentSlider.value, 10);
+  const info = sentimentInfo(v);
+  sentEmoji.textContent = info.emoji;
+  sentLabel.textContent = `${info.label} (${v})`;
+  // Color the slider track from red → yellow → green
+  const hue = Math.round(v * 1.2);  // 0 → 0 (red), 50 → 60 (yellow), 100 → 120 (green)
+  const pct = v + '%';
+  const trackColor = `hsl(${hue}, 70%, 42%)`;
+  sentSlider.style.background =
+    `linear-gradient(to right, ${trackColor} 0%, ${trackColor} ${pct}, var(--b) ${pct}, var(--b) 100%)`;
+}
+
+// ── Models ────────────────────────────────────────────────────────────────────
+function populateModels(models) {
+  selModel.innerHTML = '';
+  const list = (models && models.length) ? models : FALLBACK_MODELS;
+  list.forEach(m => {
+    const o = document.createElement('option');
+    o.value = o.textContent = m;
+    selModel.appendChild(o);
+  });
+  // Prefer newest model available
+  const prefer = ['gpt-5', 'gpt-4.5', 'gpt-4.1', 'gpt-4o', list[0]];
+  for (const p of prefer) {
+    if (list.includes(p)) { selModel.value = p; break; }
+  }
+  S.model = selModel.value;
+  bModel.textContent = S.model;
+}
+
+let fetchTimer = null;
+
+async function fetchModels(key) {
+  if (!key || !key.startsWith('sk-')) return;
+  if (S.modelsCached) return;
+
+  setStatus('Loading models…');
+  try {
+    const r = await fetch('https://api.openai.com/v1/models', {
+      headers: { 'Authorization': `Bearer ${key}` }
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error?.message || `HTTP ${r.status}`);
+
+    const chat = d.data
+      .map(m => m.id)
+      .filter(id => {
+        if (/instruct|whisper|tts|dall-e|embedding|audio|realtime|search|moderation|transcribe|speech/.test(id)) return false;
+        return /^(gpt-|o1|o3|o4|chatgpt)/.test(id);
+      })
+      .sort((a, b) => {
+        const order = ['gpt-5', 'gpt-4.5', 'gpt-4.1', 'gpt-4o', 'o4', 'o3', 'o1', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5'];
+        const ai = order.findIndex(p => a.startsWith(p));
+        const bi = order.findIndex(p => b.startsWith(p));
+        const an = ai < 0 ? 99 : ai;
+        const bn = bi < 0 ? 99 : bi;
+        return an !== bn ? an - bn : a.localeCompare(b);
+      });
+
+    S.models = chat.length ? chat : FALLBACK_MODELS;
+    S.modelsCached = true;
+    populateModels(S.models);
+    setStatus(`${S.models.length} models loaded`, 3000);
+  } catch {
+    // Silently fall back to static list
+    populateModels(FALLBACK_MODELS);
+    setStatus('');
+  }
+}
+
+// ── API key ───────────────────────────────────────────────────────────────────
+function setKey(val) {
+  S.key = val.trim();
+  const valid = S.key.length > 20;
+  dotKey.classList.toggle('on', valid);
+  if (valid) {
+    clearTimeout(fetchTimer);
+    fetchTimer = setTimeout(() => fetchModels(S.key), 700);
+  }
+}
+
+function parseKey(text, labels) {
+  for (const line of text.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    for (const lbl of labels) {
+      const m = t.match(new RegExp(`^${lbl}\\s*=\\s*["']?([^"'\\s]+)["']?`, 'i'));
+      if (m) return m[1];
+    }
+    const parts = t.split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
+    if (parts.length >= 2 && labels.some(l => l.toLowerCase() === parts[0].toLowerCase())) {
+      return parts[1];
+    }
+  }
+  return null;
+}
+
+// ── Prompt builder ────────────────────────────────────────────────────────────
+function buildPrompt() {
+  const name    = inpName.value.trim();
+  const cat     = selCat.value;
+  const len     = selLen.value;
+  const style   = selStyle.value;
+  const comments = taComm.value.trim();
+  const { desc } = sentimentInfo(sentSlider.value);
+
+  let p = `Write a ${len} ${style} product review for "${name}" in the ${cat} category.\n`;
+  p    += `Sentiment level: ${desc}.\n`;
+  if (comments) p += `Additional context: ${comments}\n`;
+  p    += `\nFormat the review using markdown with appropriate headings, bullet points, and emphasis.`;
+  return p;
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function generate() {
+  const name = inpName.value.trim();
+  if (!name) {
+    showError('Please enter a product name before generating.');
+    return;
+  }
+  if (!S.key) {
+    showError('Please enter your OpenAI API key.');
+    return;
+  }
+
+  const model = selModel.value || 'gpt-4o';
+  S.model = model;
+  bModel.textContent = model;
+  setLoading(true);
+
+  try {
+    const t0 = performance.now();
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${S.key}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an experienced product reviewer with expertise across many product categories. Write authentic, detailed, and well-structured reviews that help consumers make informed decisions.',
+          },
+          { role: 'user', content: buildPrompt() },
+        ],
+      }),
+    });
+
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error?.message || `HTTP ${r.status}`);
+
+    const text    = d.choices[0].message.content;
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+    S.lastMarkdown = text;
+
+    displayReview(text, elapsed, d.usage);
+  } catch (err) {
+    showError(err.message || 'Request failed. Check your API key and try again.');
+  }
+
+  setLoading(false);
+}
+
+// ── Display ───────────────────────────────────────────────────────────────────
+function displayReview(markdown, elapsed, usage) {
+  // Parse markdown → sanitized HTML
+  const raw  = marked.parse(markdown);
+  const html = (typeof DOMPurify !== 'undefined')
+    ? DOMPurify.sanitize(raw)
+    : raw;
+
+  rpBody.innerHTML = `<div class="review-md">${html}</div>`;
+  btnCopy.classList.remove('hidden');
+  btnDownload.classList.remove('hidden');
+
+  if (usage) {
+    const total = (usage.prompt_tokens || 0) + (usage.completion_tokens || 0);
+    setStatus(`${total.toLocaleString()} tokens · ${elapsed}s`);
+  }
+}
+
+function showError(msg) {
+  rpBody.innerHTML = `<div class="r-err"><strong>Error:</strong> ${esc(msg)}</div>`;
+  btnCopy.classList.add('hidden');
+  btnDownload.classList.add('hidden');
+  setStatus('');
+}
+
+function setLoading(on) {
+  S.loading        = on;
+  btnGen.disabled  = on;
+  btnGen.innerHTML = on
+    ? '<div class="spin-btn"></div><span>Generating…</span>'
+    : 'Generate Review';
+
+  if (on) {
+    rpBody.innerHTML = '<div class="r-loading"><div class="spin"></div><span>Generating review…</span></div>';
+    btnCopy.classList.add('hidden');
+    btnDownload.classList.add('hidden');
+    setStatus('');
+  }
+}
+
+// ── Copy to clipboard ─────────────────────────────────────────────────────────
+function copyReview() {
+  if (!S.lastMarkdown) return;
+
+  const done = () => {
+    btnCopy.textContent = '✓ Copied!';
+    btnCopy.classList.add('copied');
+    setTimeout(() => {
+      btnCopy.textContent = 'Copy to Clipboard';
+      btnCopy.classList.remove('copied');
+    }, 2000);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(S.lastMarkdown).then(done).catch(() => fallbackCopy(done));
+  } else {
+    fallbackCopy(done);
+  }
+}
+
+// ── Download review ───────────────────────────────────────────────────────────
+function downloadReview() {
+  if (!S.lastMarkdown) return;
+  const name    = inpName.value.trim() || 'review';
+  const slug    = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const blob    = new Blob([S.lastMarkdown], { type: 'text/plain' });
+  const url     = URL.createObjectURL(blob);
+  const a       = document.createElement('a');
+  a.href        = url;
+  a.download    = `${slug}-review.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function fallbackCopy(cb) {
+  const ta = document.createElement('textarea');
+  ta.value = S.lastMarkdown;
+  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch {}
+  document.body.removeChild(ta);
+  cb();
+}
+
+// ── Status helper ─────────────────────────────────────────────────────────────
+let statusTimer = null;
+function setStatus(msg, clearAfterMs) {
+  bStatus.textContent = msg;
+  clearTimeout(statusTimer);
+  if (clearAfterMs) {
+    statusTimer = setTimeout(() => { bStatus.textContent = ''; }, clearAfterMs);
+  }
+}
+
+// ── Escape HTML ───────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  // Configure marked
+  marked.use({ breaks: false, gfm: true });
+
+  // Key input
+  keyInp.oninput = () => setKey(keyInp.value);
+
+  // .env file upload
+  envFile.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const key = parseKey(ev.target.result, ['OPENAI_API_KEY', 'openai']);
+      if (key) {
+        keyInp.value = key;
+        setKey(key);
+        uploadOk.classList.remove('hidden');
+        setTimeout(() => uploadOk.classList.add('hidden'), 3000);
+      } else {
+        setStatus('Key not found in .env file', 3500);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';  // allow re-upload of same file
+  };
+
+  // Sentiment slider
+  sentSlider.oninput = updateSentiment;
+  updateSentiment();
+
+  // Model dropdown
+  selModel.onchange = () => { S.model = selModel.value; bModel.textContent = S.model; };
+
+  // Generate button
+  btnGen.onclick = () => { if (!S.loading) generate(); };
+
+  // Pressing Enter in the product name field triggers generate
+  inpName.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !S.loading) generate();
+  });
+
+  // Copy button
+  btnCopy.onclick = copyReview;
+
+  // Download button
+  btnDownload.onclick = downloadReview;
+}
+
+init();
+</script>
+</body>
+</html>
