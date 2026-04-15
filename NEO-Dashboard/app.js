@@ -1,7 +1,7 @@
 let currentTab = 'globe';
 let globeLoaded = false;
 
-const TABS = ['globe', 'neows', 'sbdb', 'sentry'];
+const TABS = ['globe', 'neows', 'sbdb', 'sizespeed'];
 
 function init() {
   bindTabNav();
@@ -27,7 +27,7 @@ function switchTab(tab) {
   if (tab === 'globe' && !globeLoaded) loadGlobeTab();
   else if (tab === 'neows') renderNeows();
   else if (tab === 'sbdb') renderSBDB();
-  else if (tab === 'sentry') renderSentry();
+  else if (tab === 'sizespeed') renderSizeSpeed();
 }
 
 async function loadGlobeTab() {

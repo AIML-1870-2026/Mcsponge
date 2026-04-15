@@ -1,5 +1,25 @@
 let globeInstance = null;
 
+function generateStarfield(width = 2048, height = 1024, count = 250, maxOpacity = 0.45) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, width, height);
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+    const r = Math.random() * 1.1;
+    const opacity = Math.random() * maxOpacity;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200, 215, 255, ${opacity})`;
+    ctx.fill();
+  }
+  return canvas.toDataURL();
+}
+
 function initGlobe(neoData) {
   const el = document.getElementById('globe-container');
   if (!el) return;
@@ -65,7 +85,7 @@ function initGlobe(neoData) {
   // --- Build Three.js sphere factory ---
   function makeSphere(d) {
     if (d.isMoon) {
-      const geo = new THREE.SphereGeometry(8, 32, 32);
+      const geo = new THREE.SphereGeometry(18, 32, 32);
       const mat = new THREE.MeshPhongMaterial({
         color: 0xaaaaaa,
         emissive: 0x333333,
@@ -75,7 +95,7 @@ function initGlobe(neoData) {
     }
 
     // Scale asteroid sphere: diameter 0–800 m maps to radius 1.0–4.0
-    const r = Math.max(1.0, Math.min(4.0, d.avgDiam / 80));
+    const r = Math.max(2.5, Math.min(8.0, d.avgDiam / 40));
     const color = d.isHazardous ? 0xff4444 : 0x00d4ff;
     const emissive = d.isHazardous ? 0x661111 : 0x004466;
     const geo = new THREE.SphereGeometry(r, 14, 14);
@@ -92,7 +112,7 @@ function initGlobe(neoData) {
   globeInstance = Globe()(el)
     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
     .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+    .backgroundImageUrl(generateStarfield())
     .showAtmosphere(true)
     .atmosphereColor('#0d4a7c')
     .atmosphereAltitude(0.15)

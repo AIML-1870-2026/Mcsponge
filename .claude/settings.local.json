@@ -4,7 +4,12 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git -C \"c:/Users/minji/Documents/Mcsponge\" status)",
+      "Bash(git -C \"/c/Users/minji/Documents/Mcsponge\" status)",
+      "Bash(git -C \"/c/Users/minji/Documents/Mcsponge\" add Readable/)",
+      "Bash(git -C:*)",
+      "Bash(git rm -r --cached Product-Review-Generator/temp/)"
     ]
   }
 }
