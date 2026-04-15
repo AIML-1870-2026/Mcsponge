@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Science Experiment Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080c12;
+      --bg-side: #0f1520;
+      --bg-card: #161d2a;
+      --bg-in:   #080c12;
+      --b:       #3d4752;
+      --b-sub:   #252d3a;
+      --t:       #f0f6fc;
+      --t2:      #a0aab8;
+      --t3:      #6e7a8a;
+      --ac:      #58a6ff;
+      --ac2:     #91c2ff;
+      --ok:      #4ade80;
+      --err:     #f87171;
+      --sans:    'Inter', system-ui, sans-serif;
+      --sw:      300px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--t);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    .sidebar {
+      width: var(--sw);
+      min-width: var(--sw);
+      background: var(--bg-side);
+      border-right: 1px solid var(--b);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0; }
+
+    /* ── Sidebar sections ── */
+    .s-sec { padding: 16px 18px; border-bottom: 1px solid var(--b-sub); }
+
+    .s-lbl {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--t3);
+      margin-bottom: 10px;
+    }
+
+    /* API key */
+    .key-row { display: flex; align-items: center; gap: 7px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--b); flex-shrink: 0; transition: background .2s; }
+    .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+    .key-inp {
+      flex: 1;
+      background: var(--bg-in);
+      border: 1px solid var(--b);
+      border-radius: 5px;
+      padding: 7px 10px;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--t);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .key-inp:focus { border-color: var(--ac); }
+    .key-inp::placeholder { color: var(--t3); }
+
+    .btn-upload {
+      width: 100%;
+      margin-top: 10px;
+      padding: 7px 12px;
+      background: transparent;
+      border: 1px dashed var(--b);
+      border-radius: 5px;
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--t2);
+      cursor: pointer;
+      transition: all .15s;
+      text-align: center;
+    }
+    .btn-upload:hover { border-color: var(--ac); color: var(--ac); }
+
+    .upload-ok { font-size: 12px; color: var(--ok); margin-top: 6px; display: none; }
+    .key-note { font-size: 11px; color: var(--t3); margin-top: 8px; line-height: 1.5; }
+
+    /* Selects */
+    .sel {
+      width: 100%;
+      background: var(--bg-in);
+      border: 1px solid var(--b);
+      border-radius: 5px;
+      padding: 8px 30px 8px 10px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--t);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a0aab8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    .sel:focus { border-color: var(--ac); }
+    .sel option { background: var(--bg-card); }
+
+    /* Supplies textarea */
+    .supplies-ta {
+      width: 100%;
+      background: var(--bg-in);
+      border: 1px solid var(--b);
+      border-radius: 5px;
+      padding: 8px 10px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--t);
+      resize: vertical;
+      min-height: 90px;
+      outline: none;
+      line-height: 1.6;
+      transition: border-color .15s;
+    }
+    .supplies-ta:focus { border-color: var(--ac); }
+    .supplies-ta::placeholder { color: var(--t3); }
+
+    /* ── Supply quick-select library ── */
+    .supply-lib { margin-top: 12px; }
+
+    .supply-lib-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .supply-lib-title { font-size: 11px; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: .07em; }
+    .supply-clear-btn {
+      font-size: 11px;
+      color: var(--t3);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--sans);
+      padding: 0;
+      text-decoration: underline;
+    }
+    .supply-clear-btn:hover { color: var(--err); }
+
+    .supply-cat { margin-bottom: 10px; }
+    .supply-cat-lbl {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--t3);
+      margin-bottom: 5px;
+      opacity: .7;
+    }
+    .supply-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+    .sc {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 9px;
+      background: var(--bg-in);
+      border: 1px solid var(--b);
+      border-radius: 100px;
+      font-size: 12px;
+      color: var(--t2);
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: all .15s;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+    .sc:hover { border-color: var(--ac); color: var(--ac); background: rgba(88,166,255,.06); }
+    .sc.added { border-color: var(--ok); color: var(--ok); background: rgba(74,222,128,.06); }
+    .sc .sc-emoji { font-size: 13px; }
+
+    /* ── Main title bar ── */
+    .m-title {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--b-sub);
+      flex-shrink: 0;
+    }
+    .m-title h1 { font-size: 20px; font-weight: 700; letter-spacing: .01em; }
+    .m-title p  { font-size: 13px; color: var(--t3); margin-top: 3px; }
+
+    /* ── Main sub-header (model badge row) ── */
+    .m-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 22px;
+      border-bottom: 1px solid var(--b-sub);
+      flex-shrink: 0;
+    }
+    .b-model {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--t2);
+      background: var(--bg-card);
+      border: 1px solid var(--b);
+      border-radius: 5px;
+      padding: 3px 10px;
+    }
+    .kbd-hint { font-size: 12px; color: var(--t3); }
+
+    /* ── Main body ── */
+    .m-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Actions */
+    .act { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .btn-send {
+      padding: 10px 22px;
+      background: var(--ac);
+      border: none;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 600;
+      color: #080c12;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .btn-send:hover:not(:disabled) { background: var(--ac2); }
+    .btn-send:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-sec {
+      padding: 10px 16px;
+      background: transparent;
+      border: 1px solid var(--b);
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--t2);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-sec:hover { border-color: var(--t2); color: var(--t); }
+
+    .btn-dl {
+      padding: 10px 16px;
+      background: transparent;
+      border: 1px solid var(--ok);
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--ok);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-dl:hover { background: rgba(74,222,128,.1); }
+
+    /* Spinner */
+    .spin {
+      width: 11px; height: 11px;
+      border: 2px solid rgba(13,17,23,.3);
+      border-top-color: #0d1117;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Output panel */
+    .panel { border: 1px solid var(--b); border-radius: 7px; overflow: hidden; }
+
+    .p-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 15px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--b);
+    }
+    .p-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--t3);
+    }
+    .p-status { font-size: 11px; color: var(--t3); }
+
+    .p-body { padding: 20px 20px 0; background: var(--bg-in); overflow-y: auto; max-height: calc(100vh - 270px); }
+
+    .out-empty { color: var(--t3); font-size: 14px; font-style: italic; }
+    .out-err   { font-size: 14px; color: var(--err); }
+
+    /* ── Markdown output ── */
+    .md-out { font-size: 15px; line-height: 1.75; color: var(--t); padding-bottom: 24px; }
+    .md-out h1 { font-size: 1.35em; font-weight: 700; color: var(--ac); margin: 0 0 14px; }
+    .md-out h2 {
+      font-size: 1.05em; font-weight: 700; color: var(--ac2);
+      margin: 22px 0 8px; padding-bottom: 5px;
+      border-bottom: 1px solid var(--b-sub);
+    }
+    .md-out h2:first-child { margin-top: 0; }
+    .md-out h3 { font-size: 1em; font-weight: 600; color: var(--t2); margin: 14px 0 6px; }
+    .md-out p  { margin: 0 0 8px; color: var(--t2); }
+    .md-out ul, .md-out ol { padding-left: 1.4em; margin: 4px 0 10px; }
+    .md-out li { margin-bottom: 5px; color: var(--t2); }
+    .md-out strong { font-weight: 600; color: var(--t); }
+    .md-out em { font-style: italic; color: var(--t3); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--b); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--t3); }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 720px) {
+      .app { flex-direction: column; height: auto; min-height: 100vh; overflow: auto; }
+      .sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--b); }
+      .main { overflow: visible; }
+      .m-body { overflow: visible; }
+      .p-body { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- API Key -->
+    <div class="s-sec">
+      <div class="s-lbl">OpenAI API Key</div>
+      <div class="key-row">
+        <div class="dot" id="dot-key"></div>
+        <input class="key-inp" type="password" id="key-inp" placeholder="sk-…" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="btn-upload" onclick="document.getElementById('env-file').click()">
+        Upload .env file
+      </button>
+      <input type="file" id="env-file" accept=".env,text/plain" style="display:none">
+      <div class="upload-ok" id="upload-ok">✓ Key loaded from file</div>
+      <p class="key-note">Key held in memory only — never stored or sent beyond OpenAI.</p>
+    </div>
+
+    <!-- Model -->
+    <div class="s-sec">
+      <div class="s-lbl">Model</div>
+      <select class="sel" id="model-sel">
+        <option value="gpt-4o" selected>gpt-4o</option>
+        <option value="gpt-4o-mini">gpt-4o-mini</option>
+        <option value="o3-mini">o3-mini</option>
+        <option value="o1">o1</option>
+        <option value="o1-mini">o1-mini</option>
+      </select>
+    </div>
+
+    <!-- Grade Level -->
+    <div class="s-sec">
+      <div class="s-lbl">Grade Level</div>
+      <select class="sel" id="grade-sel">
+        <option value="K-2">K–2 (Ages 5–8)</option>
+        <option value="3-5">3–5 (Ages 8–11)</option>
+        <option value="6-8" selected>6–8 (Ages 11–14)</option>
+        <option value="9-12">9–12 (Ages 14–18)</option>
+      </select>
+    </div>
+
+    <!-- Available Supplies -->
+    <div class="s-sec">
+      <div class="s-lbl">Available Supplies</div>
+      <textarea class="supplies-ta" id="supplies-ta"
+        placeholder="Enter supplies, one per line, or click items below:&#10;&#10;baking soda&#10;vinegar&#10;…"></textarea>
+
+      <!-- Quick-select library -->
+      <div class="supply-lib">
+        <div class="supply-lib-header">
+          <span class="supply-lib-title">Quick Select</span>
+          <button class="supply-clear-btn" onclick="clearSupplies()">Clear all</button>
+        </div>
+
+        <div class="supply-cat">
+          <div class="supply-cat-lbl">🍳 Kitchen</div>
+          <div class="supply-chips">
+            <button class="sc" onclick="addSupply(this,'baking soda')"><span class="sc-emoji">🥄</span>baking soda</button>
+            <button class="sc" onclick="addSupply(this,'vinegar')"><span class="sc-emoji">🍶</span>vinegar</button>
+            <button class="sc" onclick="addSupply(this,'water')"><span class="sc-emoji">💧</span>water</button>
+            <button class="sc" onclick="addSupply(this,'salt')"><span class="sc-emoji">🧂</span>salt</button>
+            <button class="sc" onclick="addSupply(this,'sugar')"><span class="sc-emoji">🫙</span>sugar</button>
+            <button class="sc" onclick="addSupply(this,'lemon juice')"><span class="sc-emoji">🍋</span>lemon juice</button>
+            <button class="sc" onclick="addSupply(this,'dish soap')"><span class="sc-emoji">🫧</span>dish soap</button>
+            <button class="sc" onclick="addSupply(this,'cooking oil')"><span class="sc-emoji">🧴</span>cooking oil</button>
+            <button class="sc" onclick="addSupply(this,'cornstarch')"><span class="sc-emoji">🌽</span>cornstarch</button>
+            <button class="sc" onclick="addSupply(this,'egg')"><span class="sc-emoji">🥚</span>egg</button>
+            <button class="sc" onclick="addSupply(this,'food coloring')"><span class="sc-emoji">🎨</span>food coloring</button>
+            <button class="sc" onclick="addSupply(this,'milk')"><span class="sc-emoji">🥛</span>milk</button>
+          </div>
+        </div>
+
+        <div class="supply-cat">
+          <div class="supply-cat-lbl">✂️ Art & Craft</div>
+          <div class="supply-chips">
+            <button class="sc" onclick="addSupply(this,'balloon')"><span class="sc-emoji">🎈</span>balloon</button>
+            <button class="sc" onclick="addSupply(this,'paper')"><span class="sc-emoji">📋</span>paper</button>
+            <button class="sc" onclick="addSupply(this,'cardboard')"><span class="sc-emoji">📦</span>cardboard</button>
+            <button class="sc" onclick="addSupply(this,'tape')"><span class="sc-emoji">📌</span>tape</button>
+            <button class="sc" onclick="addSupply(this,'scissors')"><span class="sc-emoji">✂️</span>scissors</button>
+            <button class="sc" onclick="addSupply(this,'marker')"><span class="sc-emoji">🖊️</span>marker</button>
+            <button class="sc" onclick="addSupply(this,'pencil')"><span class="sc-emoji">✏️</span>pencil</button>
+            <button class="sc" onclick="addSupply(this,'ruler')"><span class="sc-emoji">📏</span>ruler</button>
+            <button class="sc" onclick="addSupply(this,'string')"><span class="sc-emoji">🧵</span>string</button>
+            <button class="sc" onclick="addSupply(this,'rubber band')"><span class="sc-emoji">💛</span>rubber band</button>
+            <button class="sc" onclick="addSupply(this,'plastic cup')"><span class="sc-emoji">🥤</span>plastic cup</button>
+            <button class="sc" onclick="addSupply(this,'plastic bag')"><span class="sc-emoji">🛍️</span>plastic bag</button>
+          </div>
+        </div>
+
+        <div class="supply-cat">
+          <div class="supply-cat-lbl">🔬 Science & Tools</div>
+          <div class="supply-chips">
+            <button class="sc" onclick="addSupply(this,'battery')"><span class="sc-emoji">🔋</span>battery</button>
+            <button class="sc" onclick="addSupply(this,'magnet')"><span class="sc-emoji">🧲</span>magnet</button>
+            <button class="sc" onclick="addSupply(this,'flashlight')"><span class="sc-emoji">🔦</span>flashlight</button>
+            <button class="sc" onclick="addSupply(this,'candle')"><span class="sc-emoji">🕯️</span>candle</button>
+            <button class="sc" onclick="addSupply(this,'thermometer')"><span class="sc-emoji">🌡️</span>thermometer</button>
+            <button class="sc" onclick="addSupply(this,'bowl')"><span class="sc-emoji">🪣</span>bowl</button>
+            <button class="sc" onclick="addSupply(this,'spoon')"><span class="sc-emoji">🥄</span>spoon</button>
+            <button class="sc" onclick="addSupply(this,'aluminum foil')"><span class="sc-emoji">✨</span>aluminum foil</button>
+          </div>
+        </div>
+
+        <div class="supply-cat">
+          <div class="supply-cat-lbl">🌿 Outdoor & Nature</div>
+          <div class="supply-chips">
+            <button class="sc" onclick="addSupply(this,'soil')"><span class="sc-emoji">🌱</span>soil</button>
+            <button class="sc" onclick="addSupply(this,'rocks')"><span class="sc-emoji">🪨</span>rocks</button>
+            <button class="sc" onclick="addSupply(this,'leaves')"><span class="sc-emoji">🍃</span>leaves</button>
+            <button class="sc" onclick="addSupply(this,'sand')"><span class="sc-emoji">🏖️</span>sand</button>
+            <button class="sc" onclick="addSupply(this,'sticks')"><span class="sc-emoji">🪵</span>sticks</button>
+            <button class="sc" onclick="addSupply(this,'seeds')"><span class="sc-emoji">🌾</span>seeds</button>
+          </div>
+        </div>
+
+      </div><!-- /supply-lib -->
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- Title bar -->
+    <div class="m-title">
+      <h1>Science Experiment Generator</h1>
+      <p>AI-generated classroom experiments</p>
+    </div>
+
+    <!-- Model / shortcut bar -->
+    <div class="m-head">
+      <span class="b-model" id="b-model">gpt-4o</span>
+      <span class="kbd-hint">Ctrl+Enter to generate</span>
+    </div>
+
+    <div class="m-body">
+
+      <div class="act">
+        <button class="btn-send" id="btn-gen" onclick="generate()">Generate Experiment</button>
+        <button class="btn-sec" onclick="clearOutput()">Clear</button>
+        <button class="btn-dl hidden" id="btn-dl" onclick="download()">Download .html</button>
+      </div>
+
+      <div class="panel">
+        <div class="p-head">
+          <span class="p-title">Experiment</span>
+          <span class="p-status" id="out-status"></span>
+        </div>
+        <div class="p-body" id="out-body">
+          <span class="out-empty">Your generated experiment will appear here.</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let apiKey = '';
+let lastText = '';
+let isLoading = false;
+
+// ── DOM ────────────────────────────────────────────────────────────────────
+const g = id => document.getElementById(id);
+
+// ── API Key ─────────────────────────────────────────────────────────────────
+g('key-inp').oninput = function () {
+  apiKey = this.value.trim();
+  g('dot-key').classList.toggle('on', !!apiKey);
+  g('upload-ok').style.display = 'none';
+};
+
+g('env-file').onchange = function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const key = parseKey(ev.target.result, ['OPENAI_API_KEY', 'openai']);
+    if (key) {
+      apiKey = key;
+      g('key-inp').value = key;
+      g('dot-key').classList.add('on');
+      g('upload-ok').style.display = 'block';
+    } else {
+      alert('Could not find OPENAI_API_KEY in that file.');
+    }
+  };
+  reader.readAsText(file);
+  this.value = '';
+};
+
+// ── Model selection ─────────────────────────────────────────────────────────
+g('model-sel').onchange = function () {
+  g('b-model').textContent = this.value;
+};
+
+// ── Keyboard shortcut ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    if (!isLoading) generate();
+  }
+});
+
+// ── Supply quick-select ──────────────────────────────────────────────────────
+function addSupply(btn, name) {
+  const ta = g('supplies-ta');
+  const current = ta.value;
+  const lines = current.split('\n').map(l => l.trim()).filter(Boolean);
+
+  if (lines.includes(name)) {
+    // Already added — remove it and un-highlight chip
+    ta.value = lines.filter(l => l !== name).join('\n');
+    btn.classList.remove('added');
+  } else {
+    // Append and highlight chip
+    ta.value = lines.length ? lines.join('\n') + '\n' + name : name;
+    btn.classList.add('added');
+  }
+}
+
+function clearSupplies() {
+  g('supplies-ta').value = '';
+  document.querySelectorAll('.sc.added').forEach(b => b.classList.remove('added'));
+}
+
+// ── Generate ────────────────────────────────────────────────────────────────
+async function generate() {
+  if (!apiKey) {
+    showErr('Please enter your OpenAI API key.');
+    return;
+  }
+  const supplies = g('supplies-ta').value.trim();
+  if (!supplies) {
+    showErr('Please enter at least one supply.');
+    return;
+  }
+
+  const grade = g('grade-sel').value;
+  setLoading(true);
+
+  try {
+    const t0 = performance.now();
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: g('model-sel').value,
+        messages: [{ role: 'user', content: buildPrompt(grade, supplies) }],
+        max_completion_tokens: 1600,
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+    const text    = data.choices[0].message.content;
+    const tokens  = data.usage?.total_tokens;
+    lastText = text;
+
+    g('out-body').innerHTML = `<div class="md-out">${renderMarkdown(text)}</div>`;
+    g('out-status').textContent = `${elapsed}s · ${tokens ?? '?'} tokens`;
+    g('btn-dl').classList.remove('hidden');
+
+  } catch (err) {
+    showErr(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Prompt ──────────────────────────────────────────────────────────────────
+function buildPrompt(grade, supplies) {
+  const list = supplies
+    .split('\n')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => `- ${s}`)
+    .join('\n');
+
+  return `You are an experienced science teacher. Create a safe, hands-on science experiment for Grade ${grade} students using only the supplies listed below.
+
+Available supplies:
+${list}
+
+Write the experiment using exactly these section headings (## for each heading):
+
+## Title
+## Objective
+## Materials Needed
+## Procedure
+## Expected Results
+## The Science Behind It
+## Safety Notes
+
+Requirements:
+- Use age-appropriate language for Grade ${grade} students
+- Number each step in the Procedure
+- Safety Notes must be specific and practical
+- Keep the tone engaging and educational`;
+}
+
+// ── Download ─────────────────────────────────────────────────────────────────
+function download() {
+  const grade = g('grade-sel').value;
+  const body  = mdToHtml(lastText);
+  const html  = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Science Experiment — Grade ${grade}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 720px; margin: 48px auto; padding: 0 24px; color: #111; line-height: 1.75; }
+  h1 { font-size: 1.75em; color: #1a4a8a; margin-bottom: 6px; }
+  h2 { font-size: 1.1em; color: #1a5299; margin-top: 28px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #ccd; }
+  h3 { font-size: 1em; color: #333; margin-top: 16px; }
+  ul, ol { padding-left: 1.5em; }
+  li { margin-bottom: 5px; }
+  p  { margin: 4px 0 10px; }
+  strong { font-weight: 600; }
+  .footer { margin-top: 48px; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 12px; }
+  @media print { .footer { position: fixed; bottom: 0; } }
+</style>
+</head>
+<body>
+${body}
+<div class="footer">Generated by Science Experiment Generator &middot; Grade ${grade}</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `experiment-grade-${grade.replace('-', '')}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────────────
+function setLoading(on) {
+  isLoading = on;
+  const btn = g('btn-gen');
+  btn.disabled = on;
+  btn.innerHTML = on
+    ? '<div class="spin"></div><span>Generating…</span>'
+    : 'Generate Experiment';
+  if (on) {
+    g('out-body').innerHTML = '<span class="out-empty" style="color:var(--ac)">Generating experiment…</span>';
+    g('out-status').textContent = '';
+    g('btn-dl').classList.add('hidden');
+  }
+}
+
+function showErr(msg) {
+  g('out-body').innerHTML = `<div class="out-err">Error: ${esc(msg)}</div>`;
+  g('out-status').textContent = '';
+}
+
+function clearOutput() {
+  g('out-body').innerHTML = '<span class="out-empty">Your generated experiment will appear here.</span>';
+  g('out-status').textContent = '';
+  g('btn-dl').classList.add('hidden');
+  lastText = '';
+}
+
+// ── Markdown renderer ────────────────────────────────────────────────────────
+function renderMarkdown(raw) {
+  return mdToHtml(raw);
+}
+
+function mdToHtml(text) {
+  const lines = text.split('\n');
+  let html = '';
+  let inUl = false, inOl = false;
+
+  function closeList() {
+    if (inUl) { html += '</ul>'; inUl = false; }
+    if (inOl) { html += '</ol>'; inOl = false; }
+  }
+
+  for (const line of lines) {
+    if (/^### /.test(line)) {
+      closeList();
+      html += `<h3>${inline(line.slice(4))}</h3>`;
+    } else if (/^## /.test(line)) {
+      closeList();
+      html += `<h2>${inline(line.slice(3))}</h2>`;
+    } else if (/^# /.test(line)) {
+      closeList();
+      html += `<h1>${inline(line.slice(2))}</h1>`;
+    } else if (/^\d+\. /.test(line)) {
+      if (!inOl) { closeList(); html += '<ol>'; inOl = true; }
+      html += `<li>${inline(line.replace(/^\d+\. /, ''))}</li>`;
+    } else if (/^[-*] /.test(line)) {
+      if (!inUl) { closeList(); html += '<ul>'; inUl = true; }
+      html += `<li>${inline(line.slice(2))}</li>`;
+    } else if (line.trim() === '') {
+      closeList();
+    } else {
+      closeList();
+      html += `<p>${inline(line)}</p>`;
+    }
+  }
+  closeList();
+  return html;
+}
+
+function inline(text) {
+  return esc(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function parseKey(text, labels) {
+  for (const line of text.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    for (const lbl of labels) {
+      const m = t.match(new RegExp(`^${lbl}\\s*=\\s*["']?([^"'\\s]+)["']?`, 'i'));
+      if (m) return m[1];
+    }
+    const parts = t.split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
+    if (parts.length >= 2 && labels.some(l => l.toLowerCase() === parts[0].toLowerCase())) {
+      return parts[1];
+    }
+  }
+  return null;
+}
+</script>
+</body>
+</html>
