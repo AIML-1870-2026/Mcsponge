@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agent Blackjack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #080c12;
+      --bg-panel:   #0f1520;
+      --bg-card-ui: #161d2a;
+      --bg-input:   #080c12;
+      --border:     #3d4752;
+      --border-sub: #252d3a;
+      --text:       #f0f6fc;
+      --text2:      #a0aab8;
+      --text3:      #6e7a8a;
+      --accent:     #58a6ff;
+      --accent2:    #91c2ff;
+      --ok:         #4ade80;
+      --warn:       #fbbf24;
+      --err:        #f87171;
+      --gold:       #ffd700;
+      --felt:       #0d2b1d;
+      --mono:       'JetBrains Mono', monospace;
+      --sans:       'Inter', system-ui, sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ── Page ── */
+    .page { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* ── Header ── */
+    .header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .header-logo {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .hsep {
+      width: 1px;
+      height: 26px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .env-upload-btn {
+      padding: 5px 11px;
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-radius: 5px;
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .env-upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .env-status { font-size: 12px; color: var(--text3); white-space: nowrap; }
+    .env-status.loaded { color: var(--ok); }
+
+    .ctrl-group { display: flex; align-items: center; gap: 5px; }
+
+    .ctrl-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+
+    select.sel {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 26px 5px 8px;
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a0aab8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      min-width: 110px;
+    }
+    select.sel:focus { border-color: var(--accent); }
+    select.sel option { background: var(--bg-card-ui); }
+
+    input.num-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 8px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      width: 70px;
+      text-align: right;
+    }
+    input.num-input:focus { border-color: var(--accent); }
+
+    .balance-display {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .btn {
+      padding: 6px 13px;
+      border: none;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .btn-primary { background: var(--ok); color: #080c12; }
+    .btn-primary:hover:not(:disabled) { background: #6ef09a; }
+
+    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+    .btn-secondary:hover:not(:disabled) { border-color: var(--text2); color: var(--text); }
+
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text3); font-size: 12px; padding: 4px 9px; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .ml-auto { margin-left: auto; }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+    /* ── Table ── */
+    .table-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(ellipse at center, #1a4a30 0%, #0d2b1d 60%, #061a10 100%);
+      border-right: 1px solid #1a4a30;
+      overflow-y: auto;
+      padding: 20px 24px;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .zone-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.3);
+      margin-bottom: 8px;
+    }
+
+    .cards-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      min-height: 116px;
+    }
+
+    /* ── Playing cards ── */
+    .card {
+      width: 70px;
+      height: 105px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #ccc;
+      box-shadow: 2px 3px 9px rgba(0,0,0,.55);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 5px 6px;
+      position: relative;
+      flex-shrink: 0;
+      user-select: none;
+      transition: transform .15s;
+    }
+    .card:hover { transform: translateY(-3px); }
+
+    .card-corner { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+    .card-corner.bot { transform: rotate(180deg); }
+    .card-rank { font-size: 15px; font-weight: 700; line-height: 1; }
+    .card-suit-sm { font-size: 11px; line-height: 1; }
+    .card-suit-ctr {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      font-size: 26px;
+      opacity: .13;
+      pointer-events: none;
+    }
+
+    .card.red   { color: #cc0000; }
+    .card.black { color: #111; }
+
+    .card.face-down {
+      background: repeating-linear-gradient(
+        45deg, #1a3a6a 0px, #1a3a6a 4px, #0d2b50 4px, #0d2b50 8px
+      );
+      border-color: #2a4a8a;
+      cursor: default;
+    }
+    .card.face-down:hover { transform: none; }
+    .card.face-down::after {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border: 2px solid rgba(255,255,255,.12);
+      border-radius: 4px;
+    }
+
+    .card-placeholder {
+      width: 70px;
+      height: 105px;
+      border-radius: 8px;
+      border: 2px dashed rgba(255,255,255,.12);
+      flex-shrink: 0;
+    }
+
+    @keyframes dealIn {
+      from { opacity: 0; transform: translateY(-18px) scale(.9); }
+      to   { opacity: 1; transform: translateY(0)     scale(1);  }
+    }
+    .card.new { animation: dealIn .22s ease-out both; }
+
+    .score-display {
+      font-size: 13px;
+      color: rgba(255,255,255,.65);
+      margin-top: 6px;
+      font-family: var(--mono);
+    }
+    .score-display .score-num { font-size: 20px; font-weight: 700; color: #fff; margin-right: 5px; }
+    .score-display.bust      .score-num { color: var(--err);  }
+    .score-display.blackjack .score-num { color: var(--gold); }
+
+    /* ── Status bar ── */
+    .status-bar {
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(255,255,255,.75);
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .status-bar.win       { border-color: var(--ok);   color: var(--ok);   background: rgba(74,222,128,.1);  }
+    .status-bar.lose      { border-color: var(--err);  color: var(--err);  background: rgba(248,113,113,.1); }
+    .status-bar.push      { border-color: var(--warn); color: var(--warn); background: rgba(251,191,36,.1);  }
+    .status-bar.blackjack { border-color: var(--gold); color: var(--gold); background: rgba(255,215,0,.1);   }
+
+    /* ── Bet chip ── */
+    .bet-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0,0,0,.4);
+      border: 1px solid rgba(255,215,0,.3);
+      border-radius: 20px;
+      padding: 3px 11px;
+      font-size: 13px;
+      color: var(--gold);
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+
+    /* ── Action buttons ── */
+    .actions-row {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-action {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      cursor: pointer;
+      transition: all .15s;
+      text-transform: uppercase;
+    }
+    .btn-action:disabled { opacity: .3; cursor: not-allowed; transform: none !important; }
+    .btn-action:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.12); }
+
+    .btn-hit       { background: #2563eb; color: #fff; }
+    .btn-stand     { background: #dc2626; color: #fff; }
+    .btn-double    { background: #7c3aed; color: #fff; }
+    .btn-split     { background: #d97706; color: #fff; }
+    .btn-insurance { background: #0891b2; color: #fff; }
+
+    /* ── AI Panel ── */
+    .ai-panel {
+      width: 310px;
+      min-width: 260px;
+      background: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .ai-panel-head {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border-sub);
+      flex-shrink: 0;
+    }
+
+    .ai-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    .ai-rec-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .ai-rec-label { font-size: 13px; color: var(--text2); }
+
+    .ai-rec-value {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      padding: 2px 8px;
+      background: rgba(255,215,0,.1);
+      border: 1px solid rgba(255,215,0,.3);
+      border-radius: 4px;
+    }
+    .ai-rec-value.empty { color: var(--text3); background: transparent; border-color: var(--border-sub); }
+
+    .btn-execute {
+      width: 100%;
+      padding: 8px;
+      background: rgba(88,166,255,.08);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-execute:hover:not(:disabled) { background: rgba(88,166,255,.2); }
+    .btn-execute:disabled { opacity: .3; cursor: not-allowed; }
+
+    .ai-body {
+      flex: 1;
+      padding: 14px 16px;
+      overflow-y: auto;
+    }
+
+    .ai-thinking {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent);
+      font-size: 13px;
+    }
+
+    .spin {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(88,166,255,.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ai-reasoning { font-size: 14px; color: var(--text2); line-height: 1.65; }
+    .ai-reasoning.empty { color: var(--text3); font-style: italic; }
+
+    .ai-error {
+      font-size: 13px;
+      color: var(--err);
+      padding: 9px 11px;
+      background: rgba(248,113,113,.07);
+      border: 1px solid rgba(248,113,113,.22);
+      border-radius: 6px;
+    }
+
+    /* ── Stats ── */
+    .ai-stats {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-sub);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .stat-box {
+      background: var(--bg-card-ui);
+      border: 1px solid var(--border-sub);
+      border-radius: 6px;
+      padding: 9px 11px;
+    }
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 3px;
+    }
+    .stat-value { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--text); }
+    .stat-value.positive { color: var(--ok); }
+    .stat-value.negative { color: var(--err); }
+
+    /* ── About modal ── */
+    dialog {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 0;
+      max-width: 480px;
+      width: 90%;
+    }
+    dialog::backdrop { background: rgba(0,0,0,.7); }
+
+    .modal-head {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--border-sub);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-head h2 { font-size: 17px; font-weight: 700; }
+
+    .btn-close { background: transparent; border: none; color: var(--text3); font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; }
+    .btn-close:hover { color: var(--text); }
+
+    .modal-body { padding: 16px 18px; font-size: 14px; color: var(--text2); line-height: 1.7; }
+    .modal-body h3 { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text3); margin: 14px 0 6px; }
+    .modal-body h3:first-child { margin-top: 0; }
+    .modal-body ul { padding-left: 16px; }
+    .modal-body li { margin-bottom: 4px; }
+    .modal-body code { font-family: var(--mono); font-size: 12px; background: var(--bg-card-ui); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+    @media (max-width: 720px) {
+      .main { flex-direction: column; }
+      .ai-panel { width: 100%; min-width: unset; max-height: 280px; }
+      .table-area { border-right: none; border-bottom: 1px solid #1a4a30; }
+    }
+
+    /* ── Explainability chips ── */
+    .explain-row { display: flex; gap: 5px; margin-top: 10px; }
+    .explain-chip {
+      flex: 1; padding: 5px 2px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-family: var(--sans);
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .04em; text-transform: uppercase;
+      color: var(--text3); cursor: pointer; transition: all .15s; text-align: center;
+    }
+    .explain-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .explain-chip.on { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,.1); }
+
+    /* ── Analytics button ── */
+    .btn-analytics {
+      display: block; width: calc(100% - 32px); margin: 8px 16px 12px;
+      padding: 7px; background: transparent;
+      border: 1px solid var(--border-sub); border-radius: 5px;
+      font-family: var(--sans); font-size: 12px;
+      color: var(--text3); cursor: pointer; transition: all .15s; text-align: center;
+    }
+    .btn-analytics:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Analytics modal ── */
+    #analytics-modal { max-width: 560px; }
+    .an-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+    .an-card { background: var(--bg-card-ui); border: 1px solid var(--border-sub); border-radius: 6px; padding: 10px 12px; }
+    .an-lbl  { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 3px; }
+    .an-val  { font-family: var(--mono); font-size: 17px; font-weight: 600; color: var(--text); }
+    .an-val.positive { color: var(--ok); }
+    .an-val.negative { color: var(--err); }
+    .sparkline-box { background: var(--bg-card-ui); border: 1px solid var(--border-sub); border-radius: 7px; padding: 12px 14px; margin-bottom: 14px; }
+    .sparkline-lbl { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+    .hand-log-title { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+    .hand-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .hand-tbl th { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border-sub); color: var(--text3); font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+    .hand-tbl td { padding: 5px 8px; border-bottom: 1px solid var(--border-sub); color: var(--text2); font-family: var(--mono); }
+    .hand-tbl tr:last-child td { border-bottom: none; }
+    .oc-win  { color: var(--ok);   font-weight: 600; }
+    .oc-lose { color: var(--err);  font-weight: 600; }
+    .oc-push { color: var(--warn); font-weight: 600; }
+    .oc-bj   { color: var(--gold); font-weight: 600; }
+    .td-followed { color: var(--ok); }
+    .td-deviated { color: var(--warn); }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <div class="header-logo">♠ AI Blackjack</div>
+    <div class="hsep"></div>
+
+    <!-- .env upload -->
+    <input type="file" id="env-file" accept=".env,text/plain" style="display:none">
+    <button class="env-upload-btn" onclick="document.getElementById('env-file').click()">Upload .env</button>
+    <span class="env-status" id="env-status">No key loaded</span>
+
+    <div class="hsep"></div>
+
+    <!-- Model family -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Family</span>
+      <select class="sel" id="family-sel" disabled>
+        <option value="">— load key —</option>
+      </select>
+    </div>
+
+    <!-- Model -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Model</span>
+      <select class="sel" id="model-sel" disabled>
+        <option value="">— select family —</option>
+      </select>
+    </div>
+
+    <!-- Bet -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Bet</span>
+      <span style="color:var(--gold);font-family:var(--mono);font-size:13px">$</span>
+      <input type="number" class="num-input" id="bet-input" value="50" min="1" max="9999" step="1">
+    </div>
+
+    <!-- Balance -->
+    <div class="balance-display" id="balance-display">Balance: $1,000</div>
+
+    <button class="btn btn-secondary" id="btn-refresh" disabled>Refresh Models</button>
+    <button class="btn btn-primary"   id="btn-play"    disabled>PLAY</button>
+
+    <button class="btn btn-ghost ml-auto" onclick="document.getElementById('about-modal').showModal()">About</button>
+  </header>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- ── TABLE ── -->
+    <div class="table-area">
+
+      <!-- DEALER -->
+      <div>
+        <div class="zone-label">Dealer</div>
+        <div class="cards-row" id="dealer-cards"></div>
+        <div class="score-display" id="dealer-score"></div>
+      </div>
+
+      <!-- STATUS -->
+      <div class="status-bar" id="status-bar">Upload a .env file with <code style="font-family:monospace;font-size:13px;background:rgba(255,255,255,.08);padding:1px 6px;border-radius:3px">OPENAI_API_KEY</code> to start.</div>
+
+      <!-- PLAYER -->
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div class="zone-label" style="margin-bottom:0">Player</div>
+          <div class="bet-chip" id="bet-chip" style="display:none">Bet: $<span id="bet-chip-val">50</span></div>
+        </div>
+        <div class="cards-row" id="player-cards"></div>
+        <div class="score-display" id="player-score"></div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="actions-row">
+        <button class="btn-action btn-hit"       id="btn-hit"       disabled>Hit</button>
+        <button class="btn-action btn-stand"     id="btn-stand"     disabled>Stand</button>
+        <button class="btn-action btn-double"    id="btn-double"    disabled>Double</button>
+        <button class="btn-action btn-split"     id="btn-split"     disabled>Split</button>
+        <button class="btn-action btn-insurance" id="btn-insurance" disabled>Insurance</button>
+      </div>
+
+    </div><!-- /.table-area -->
+
+    <!-- ── AI PANEL ── -->
+    <aside class="ai-panel">
+      <div class="ai-panel-head">
+        <div class="ai-section-title">AI Agent</div>
+        <div class="ai-rec-row">
+          <span class="ai-rec-label">Recommends:</span>
+          <span class="ai-rec-value empty" id="ai-rec-value">--</span>
+        </div>
+        <button class="btn-execute" id="btn-execute" disabled>Execute Recommendation</button>
+        <!-- Explainability level -->
+        <div class="explain-row">
+          <button class="explain-chip on" data-level="basic">Basic</button>
+          <button class="explain-chip"    data-level="statistical">Statistical</button>
+          <button class="explain-chip"    data-level="in-depth">In-Depth</button>
+        </div>
+      </div>
+
+      <div class="ai-body" id="ai-body">
+        <div class="ai-reasoning empty">AI analysis will appear here after a hand begins.</div>
+      </div>
+
+      <div class="ai-stats">
+        <div class="stat-box">
+          <div class="stat-label">Hands</div>
+          <div class="stat-value" id="stat-hands">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">P / L</div>
+          <div class="stat-value" id="stat-pl">$0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Wins</div>
+          <div class="stat-value positive" id="stat-wins">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Losses</div>
+          <div class="stat-value negative" id="stat-losses">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value" id="stat-winrate">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">AI Followed</div>
+          <div class="stat-value" id="stat-followed">—</div>
+        </div>
+      </div>
+      <button class="btn-analytics" id="btn-analytics">View Performance Analytics</button>
+    </aside>
+
+  </div><!-- /.main -->
+</div><!-- /.page -->
+
+<!-- ── ABOUT MODAL ── -->
+<dialog id="about-modal">
+  <div class="modal-head">
+    <h2>♠ AI Agent Blackjack</h2>
+    <button class="btn-close" onclick="document.getElementById('about-modal').close()">×</button>
+  </div>
+  <div class="modal-body">
+    <h3>Getting Started</h3>
+    <ul>
+      <li>Upload a <code>.env</code> file containing <code>OPENAI_API_KEY=sk-...</code></li>
+      <li>Click <strong>Refresh Models</strong> to load available Claude models</li>
+      <li>Select a model family and model, set your bet, then click <strong>PLAY</strong></li>
+    </ul>
+    <h3>Using the AI Agent</h3>
+    <ul>
+      <li>After each deal or hit, the AI automatically recommends an action</li>
+      <li>Click <strong>Execute Recommendation</strong> to follow it, or choose your own</li>
+      <li>The AI returns structured JSON: <code>{"action":"hit","reasoning":"..."}</code></li>
+    </ul>
+    <h3>Rules</h3>
+    <ul>
+      <li>Starting balance: $1,000</li>
+      <li>Blackjack pays 1.5× your bet</li>
+      <li>Dealer stands on 17+, hits on 16 or less</li>
+      <li><strong>Double</strong> — available on your first two cards only</li>
+      <li><strong>Split</strong> — available when you hold a pair (plays one new hand)</li>
+      <li><strong>Insurance</strong> — available when dealer shows an Ace; costs half your bet, pays 2:1 if dealer has blackjack</li>
+    </ul>
+    <h3>Privacy</h3>
+    <ul>
+      <li>API key is held in memory only — never stored or logged</li>
+    </ul>
+  </div>
+</dialog>
+
+<!-- ── ANALYTICS MODAL ── -->
+<dialog id="analytics-modal">
+  <div class="modal-head">
+    <h2>Performance Analytics</h2>
+    <button class="btn-close" onclick="document.getElementById('analytics-modal').close()">×</button>
+  </div>
+  <div class="modal-body" style="max-height:72vh;overflow-y:auto">
+    <div class="an-grid" id="an-grid"></div>
+    <div class="sparkline-box">
+      <div class="sparkline-lbl">Bankroll History</div>
+      <canvas id="sparkline" height="90" style="width:100%;height:90px;display:block"></canvas>
+    </div>
+    <div>
+      <div class="hand-log-title">Hand Log</div>
+      <div style="max-height:200px;overflow-y:auto">
+        <table class="hand-tbl">
+          <thead><tr><th>#</th><th>AI Rec</th><th>You Played</th><th>Followed?</th><th>Outcome</th><th>Balance</th></tr></thead>
+          <tbody id="hand-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const SUITS     = ['♠','♥','♦','♣'];
+const RANKS     = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RED_SUITS = new Set(['♥','♦']);
+const START_BAL = 1000;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const G = {
+  apiKey:          null,
+  modelFamily:     null,
+  model:           null,
+  familyMap:       {},   // family → [{id, displayName}]
+
+  balance:         START_BAL,
+  bet:             50,
+  phase:           'idle',  // idle | player | dealer | end
+  deck:            [],
+  playerHand:      [],
+  dealerHand:      [],      // index 0 = hidden card during player phase
+
+  aiRec:           null,    // { action, reasoning } | null
+  aiLoading:       false,
+
+  insuranceTaken:  false,
+  insuranceBet:    0,
+  doubled:         false,
+
+  handsPlayed:     0,
+  wins:            0,
+  losses:          0,
+
+  // Explainability
+  explainLevel:    'basic',  // 'basic' | 'statistical' | 'in-depth'
+
+  // Analytics
+  bankrollHistory: [START_BAL],
+  handLog:         [],       // [{hand, aiRec, playerAction, outcome, delta, balance, followedAI}]
+  roundAiRec:      null,     // AI's first recommendation this round
+  roundPlayerAction: null,   // Player's first action this round
+  aiFollowCount:   0,        // hands where player followed AI
+  aiDecisionCount: 0,        // hands where AI had a recommendation to follow
+};
+
+// ── DOM helpers ───────────────────────────────────────────────────────────────
+const $   = id => document.getElementById(id);
+const mkEl = (tag, cls) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  return e;
+};
+
+// ── Deck ──────────────────────────────────────────────────────────────────────
+function buildDeck() {
+  const d = [];
+  for (const suit of SUITS)
+    for (const rank of RANKS)
+      d.push({ rank, suit });
+  return d;
+}
+
+function shuffle(deck) {
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+// ── Scoring ───────────────────────────────────────────────────────────────────
+function cardValue(rank) {
+  if (rank === 'A') return 11;
+  if (['J','Q','K'].includes(rank)) return 10;
+  return parseInt(rank, 10);
+}
+
+function calcScore(hand) {
+  let total = 0, aces = 0;
+  for (const c of hand) {
+    if (c.hidden) continue;
+    total += cardValue(c.rank);
+    if (c.rank === 'A') aces++;
+  }
+  while (total > 21 && aces > 0) { total -= 10; aces--; }
+  return total;
+}
+
+function calcFullScore(hand) {
+  return calcScore(hand.map(c => ({ ...c, hidden: false })));
+}
+
+function isBlackjack(hand) {
+  if (hand.length !== 2) return false;
+  const visible = hand.filter(c => !c.hidden);
+  if (visible.length < 2) return false;
+  const ranks = visible.map(c => c.rank);
+  return ranks.includes('A') && ranks.some(r => ['10','J','Q','K'].includes(r));
+}
+
+// ── Game flow ─────────────────────────────────────────────────────────────────
+function startRound() {
+  const betVal = parseInt($('bet-input').value, 10) || 0;
+  if (betVal < 1 || betVal > G.balance) {
+    setStatus(`Invalid bet. You have $${G.balance.toLocaleString()}.`, '');
+    return;
+  }
+
+  G.bet               = betVal;
+  G.doubled           = false;
+  G.insuranceTaken    = false;
+  G.insuranceBet      = 0;
+  G.aiRec             = null;
+  G.roundAiRec        = null;
+  G.roundPlayerAction = null;
+  G.deck              = shuffle(buildDeck());
+  G.playerHand     = [];
+  G.dealerHand     = [];
+
+  // Deal: player, dealer (face-down), player, dealer
+  G.playerHand.push({ ...G.deck.pop() });
+  G.dealerHand.push({ ...G.deck.pop(), hidden: true });
+  G.playerHand.push({ ...G.deck.pop() });
+  G.dealerHand.push({ ...G.deck.pop() });
+
+  G.phase = 'player';
+
+  $('bet-chip').style.display  = '';
+  $('bet-chip-val').textContent = G.bet;
+
+  $('ai-rec-value').textContent = '--';
+  $('ai-rec-value').className   = 'ai-rec-value empty';
+  $('btn-execute').disabled     = true;
+  $('ai-body').innerHTML        = '<div class="ai-reasoning empty">Consulting AI agent…</div>';
+
+  renderAll();
+  updateActionButtons();
+  setStatus('Your turn — hit, stand, or follow the AI recommendation.', '');
+
+  console.log('[BJ] Round started. Player:', handStr(G.playerHand), '| Dealer up:', cardStr(G.dealerHand[1]));
+
+  // Instant blackjack check
+  if (isBlackjack(G.playerHand)) {
+    G.dealerHand[0].hidden = false;
+    renderAll();
+    if (isBlackjack(G.dealerHand)) endRound('push');
+    else endRound('blackjack');
+    return;
+  }
+
+  fetchAIRecommendation();
+}
+
+function recordPlayerAction(action) {
+  if (G.roundPlayerAction === null) G.roundPlayerAction = action;
+}
+
+function playerHit() {
+  if (G.phase !== 'player') return;
+  recordPlayerAction('hit');
+  G.playerHand.push({ ...G.deck.pop() });
+  renderAll();
+
+  const score = calcScore(G.playerHand);
+  console.log('[BJ] Player hit. Score:', score, '| Hand:', handStr(G.playerHand));
+
+  if (score > 21)     endRound('bust');
+  else if (score === 21) playerStand();
+  else { updateActionButtons(); fetchAIRecommendation(); }
+}
+
+function playerStand() {
+  if (G.phase !== 'player') return;
+  recordPlayerAction('stand');
+  G.phase = 'dealer';
+  G.dealerHand[0].hidden = false;
+  updateActionButtons();
+  renderAll();
+  console.log('[BJ] Player stands. Dealer reveals:', cardStr(G.dealerHand[0]));
+  setTimeout(dealerPlay, 500);
+}
+
+function playerDouble() {
+  if (G.phase !== 'player' || G.playerHand.length !== 2) return;
+  if (G.bet * 2 > G.balance) { setStatus('Not enough balance to double.', ''); return; }
+  recordPlayerAction('double');
+  G.bet *= 2;
+  G.doubled = true;
+  $('bet-chip-val').textContent = G.bet;
+  G.playerHand.push({ ...G.deck.pop() });
+  renderAll();
+  console.log('[BJ] Player doubled. Bet:', G.bet, '| New card:', cardStr(G.playerHand[2]));
+  const score = calcScore(G.playerHand);
+  if (score > 21) endRound('bust');
+  else playerStand();
+}
+
+function playerSplit() {
+  if (G.phase !== 'player' || G.playerHand.length !== 2) return;
+  if (cardValue(G.playerHand[0].rank) !== cardValue(G.playerHand[1].rank)) return;
+  if (G.bet * 2 > G.balance) { setStatus('Not enough balance to split.', ''); return; }
+  recordPlayerAction('split');
+  // Play on with first card + new card (simple single-hand split)
+  G.playerHand = [G.playerHand[0], { ...G.deck.pop() }];
+  console.log('[BJ] Player split. New hand:', handStr(G.playerHand));
+  renderAll();
+  updateActionButtons();
+  fetchAIRecommendation();
+}
+
+function playerInsurance() {
+  if (G.phase !== 'player' || G.insuranceTaken) return;
+  if (G.dealerHand[1]?.rank !== 'A') return;
+  const insBet = Math.floor(G.bet / 2);
+  if (insBet < 1 || insBet > G.balance - G.bet) { setStatus('Not enough balance for insurance.', ''); return; }
+  recordPlayerAction('insurance');
+  G.insuranceTaken = true;
+  G.insuranceBet   = insBet;
+  console.log('[BJ] Insurance taken: $', insBet);
+  setStatus(`Insurance taken for $${insBet}. Continue playing.`, '');
+  updateActionButtons();
+}
+
+function dealerPlay() {
+  G.dealerHand[0].hidden = false;
+  renderAll();
+
+  const step = () => {
+    const score = calcFullScore(G.dealerHand);
+    console.log('[BJ] Dealer score:', score, '| Hand:', handStr(G.dealerHand));
+    if (score <= 16) {
+      G.dealerHand.push({ ...G.deck.pop() });
+      renderAll();
+      setTimeout(step, 650);
+    } else {
+      resolveHand();
+    }
+  };
+  setTimeout(step, 600);
+}
+
+function resolveHand() {
+  G.dealerHand[0].hidden = false;
+  renderAll();
+
+  const pScore  = calcScore(G.playerHand);
+  const dScore  = calcFullScore(G.dealerHand);
+  const dealerBJ = isBlackjack(G.dealerHand);
+
+  console.log('[BJ] Resolve. Player:', pScore, '| Dealer:', dScore, '| Dealer BJ:', dealerBJ);
+
+  if (G.insuranceTaken) {
+    if (dealerBJ) { G.balance += G.insuranceBet * 2; console.log('[BJ] Insurance won +$', G.insuranceBet * 2); }
+    else          { G.balance -= G.insuranceBet;      console.log('[BJ] Insurance lost -$', G.insuranceBet); }
+  }
+
+  if      (dScore > 21)          endRound('dealer-bust');
+  else if (dScore > pScore)      endRound('lose');
+  else if (pScore > dScore)      endRound('win');
+  else                           endRound('push');
+}
+
+function endRound(outcome) {
+  G.phase = 'end';
+  G.handsPlayed++;
+
+  const outcomes = {
+    blackjack:   { delta: +Math.floor(G.bet * 1.5), text: `♠ Blackjack! You win $${Math.floor(G.bet * 1.5)}!`, cls: 'blackjack', win: true  },
+    bust:        { delta: -G.bet,                   text: `Bust! You lose $${G.bet}.`,                          cls: 'lose',      win: false },
+    'dealer-bust':{ delta: +G.bet,                  text: `Dealer busts! You win $${G.bet}!`,                  cls: 'win',       win: true  },
+    win:         { delta: +G.bet,                   text: `You win $${G.bet}!`,                                cls: 'win',       win: true  },
+    lose:        { delta: -G.bet,                   text: `You lose $${G.bet}.`,                               cls: 'lose',      win: false },
+    push:        { delta: 0,                        text: 'Push — bet returned.',                              cls: 'push',      win: null  },
+  };
+
+  const o = outcomes[outcome];
+  G.balance += o.delta;
+  if (o.win === true)  G.wins++;
+  if (o.win === false) G.losses++;
+
+  // Analytics tracking
+  G.bankrollHistory.push(G.balance);
+  if (G.roundAiRec !== null) {
+    G.aiDecisionCount++;
+    const followedAI = G.roundPlayerAction === G.roundAiRec;
+    if (followedAI) G.aiFollowCount++;
+    G.handLog.push({
+      hand:         G.handsPlayed,
+      aiRec:        G.roundAiRec,
+      playerAction: G.roundPlayerAction || '—',
+      followedAI,
+      outcome,
+      delta:        o.delta,
+      balance:      G.balance,
+    });
+  }
+
+  console.log('[BJ] Outcome:', outcome, '| Delta:', o.delta, '| Balance:', G.balance);
+
+  setStatus(o.text, o.cls);
+  renderAll();
+  updateActionButtons();
+  updateStats();
+
+  G.aiRec = null;
+  $('ai-rec-value').textContent = '--';
+  $('ai-rec-value').className   = 'ai-rec-value empty';
+  $('btn-execute').disabled     = true;
+
+  if (G.balance <= 0) {
+    setStatus('Game over — you are out of chips! Refresh the page to start over.', 'lose');
+    $('btn-play').disabled = true;
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderHand('dealer-cards', G.dealerHand);
+  renderHand('player-cards', G.playerHand);
+  renderScore('dealer-score', G.dealerHand, true);
+  renderScore('player-score', G.playerHand, false);
+  $('balance-display').textContent = `Balance: $${G.balance.toLocaleString()}`;
+}
+
+function renderHand(id, hand) {
+  const c = $(id);
+  c.innerHTML = '';
+  if (hand.length === 0) {
+    c.appendChild(mkEl('div', 'card-placeholder'));
+    return;
+  }
+  for (const card of hand) {
+    const el = makeCardEl(card);
+    el.classList.add('new');
+    c.appendChild(el);
+  }
+}
+
+function makeCardEl(card) {
+  if (card.hidden) return mkEl('div', 'card face-down');
+  const isRed = RED_SUITS.has(card.suit);
+  const d = mkEl('div', `card ${isRed ? 'red' : 'black'}`);
+
+  const top = mkEl('div', 'card-corner top');
+  top.innerHTML = `<span class="card-rank">${card.rank}</span><span class="card-suit-sm">${card.suit}</span>`;
+
+  const ctr = mkEl('div', 'card-suit-ctr');
+  ctr.textContent = card.suit;
+
+  const bot = mkEl('div', 'card-corner bot');
+  bot.innerHTML = `<span class="card-rank">${card.rank}</span><span class="card-suit-sm">${card.suit}</span>`;
+
+  d.append(top, ctr, bot);
+  return d;
+}
+
+function renderScore(id, hand, isDealer) {
+  const el = $(id);
+  const visible = isDealer ? hand.filter(c => !c.hidden) : hand;
+  if (visible.length === 0) { el.textContent = ''; el.className = 'score-display'; return; }
+
+  const score = calcScore(visible);
+  const isBust = score > 21;
+  const isBJ   = !isDealer && isBlackjack(hand);
+  el.className  = `score-display${isBust ? ' bust' : isBJ ? ' blackjack' : ''}`;
+
+  let suffix = '';
+  if (isBust) suffix = ' — BUST';
+  else if (isBJ) suffix = ' — BLACKJACK';
+  else if (isDealer && hand.some(c => c.hidden)) suffix = ' (partial)';
+
+  el.innerHTML = `<span class="score-num">${score}</span>${suffix}`;
+}
+
+function setStatus(text, cls) {
+  const b = $('status-bar');
+  b.textContent = text;
+  b.className = `status-bar${cls ? ' ' + cls : ''}`;
+}
+
+function updateActionButtons() {
+  const playing   = G.phase === 'player';
+  const firstTwo  = playing && G.playerHand.length === 2 && !G.doubled;
+  const hasPair   = firstTwo && cardValue(G.playerHand[0].rank) === cardValue(G.playerHand[1].rank);
+  const dealerAce = playing && G.dealerHand[1]?.rank === 'A';
+
+  $('btn-hit').disabled       = !playing;
+  $('btn-stand').disabled     = !playing;
+  $('btn-double').disabled    = !(firstTwo && G.bet * 2 <= G.balance);
+  $('btn-split').disabled     = !(hasPair && G.bet * 2 <= G.balance);
+  $('btn-insurance').disabled = !(dealerAce && !G.insuranceTaken);
+  $('btn-play').disabled      = (G.phase !== 'idle' && G.phase !== 'end') || !G.model || G.balance <= 0;
+}
+
+function updateStats() {
+  $('stat-hands').textContent  = G.handsPlayed;
+  $('stat-wins').textContent   = G.wins;
+  $('stat-losses').textContent = G.losses;
+  const pl = G.balance - START_BAL;
+  const e  = $('stat-pl');
+  e.textContent = (pl >= 0 ? '+' : '-') + '$' + Math.abs(pl).toLocaleString();
+  e.className   = `stat-value${pl > 0 ? ' positive' : pl < 0 ? ' negative' : ''}`;
+
+  const wr = G.handsPlayed > 0 ? Math.round(G.wins / G.handsPlayed * 100) : null;
+  $('stat-winrate').textContent = wr !== null ? `${wr}%` : '—';
+
+  const fr = G.aiDecisionCount > 0 ? Math.round(G.aiFollowCount / G.aiDecisionCount * 100) : null;
+  $('stat-followed').textContent = fr !== null ? `${fr}%` : '—';
+}
+
+// ── Analytics modal ──────────────────────────────────────────────────────────
+function openAnalytics() {
+  // Summary cards
+  const pl     = G.balance - START_BAL;
+  const wr     = G.handsPlayed > 0 ? (G.wins / G.handsPlayed * 100).toFixed(1) : '—';
+  const fr     = G.aiDecisionCount > 0 ? (G.aiFollowCount / G.aiDecisionCount * 100).toFixed(1) : '—';
+  const bestBal  = G.bankrollHistory.length > 1 ? Math.max(...G.bankrollHistory) : G.balance;
+  const worstBal = G.bankrollHistory.length > 1 ? Math.min(...G.bankrollHistory) : G.balance;
+
+  const cards = [
+    { label: 'Hands Played', value: G.handsPlayed, cls: '' },
+    { label: 'Win Rate',     value: wr !== '—' ? `${wr}%` : '—', cls: '' },
+    { label: 'P / L',        value: (pl >= 0 ? '+' : '-') + '$' + Math.abs(pl).toLocaleString(), cls: pl > 0 ? 'positive' : pl < 0 ? 'negative' : '' },
+    { label: 'Peak Balance', value: `$${bestBal.toLocaleString()}`,  cls: 'positive' },
+    { label: 'Low Balance',  value: `$${worstBal.toLocaleString()}`, cls: 'negative' },
+    { label: 'AI Followed',  value: fr !== '—' ? `${fr}%` : '—', cls: '' },
+  ];
+  $('an-grid').innerHTML = cards.map(c =>
+    `<div class="an-card"><div class="an-lbl">${c.label}</div><div class="an-val ${c.cls}">${c.value}</div></div>`
+  ).join('');
+
+  // Sparkline
+  const canvas = $('sparkline');
+  canvas.width = canvas.offsetWidth || 500;
+  drawSparkline(canvas, G.bankrollHistory, START_BAL);
+
+  // Hand log table
+  const tbody = $('hand-tbody');
+  if (G.handLog.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:12px">No hands played yet.</td></tr>`;
+  } else {
+    const ocCls = { blackjack:'oc-bj', bust:'oc-lose', 'dealer-bust':'oc-win', win:'oc-win', lose:'oc-lose', push:'oc-push' };
+    const ocLabel = { blackjack:'Blackjack!', bust:'Bust', 'dealer-bust':'Dealer Bust', win:'Win', lose:'Loss', push:'Push' };
+    tbody.innerHTML = [...G.handLog].reverse().map(h =>
+      `<tr>
+        <td>${h.hand}</td>
+        <td>${h.aiRec}</td>
+        <td>${h.playerAction}</td>
+        <td class="${h.followedAI ? 'td-followed' : 'td-deviated'}">${h.followedAI ? '✓ Yes' : '✗ No'}</td>
+        <td class="${ocCls[h.outcome] || ''}">${ocLabel[h.outcome] || h.outcome}</td>
+        <td>$${h.balance.toLocaleString()}</td>
+      </tr>`
+    ).join('');
+  }
+
+  document.getElementById('analytics-modal').showModal();
+}
+
+function drawSparkline(canvas, history, baseline) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (history.length < 2) {
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Play some hands to see bankroll history.', W / 2, H / 2 + 5);
+    return;
+  }
+
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const range = max - min || 1;
+  const pad = { top: 10, bottom: 10, left: 4, right: 4 };
+  const innerW = W - pad.left - pad.right;
+  const innerH = H - pad.top - pad.bottom;
+
+  const xOf = i => pad.left + (i / (history.length - 1)) * innerW;
+  const yOf = v => pad.top + (1 - (v - min) / range) * innerH;
+
+  // Baseline (starting balance) reference line
+  if (baseline >= min && baseline <= max) {
+    const y = yOf(baseline);
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Fill area under line (green above baseline, red below)
+  const baseY = Math.min(Math.max(yOf(baseline), pad.top), H - pad.bottom);
+  const gradient = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+  gradient.addColorStop(0, 'rgba(74,222,128,0.25)');
+  gradient.addColorStop(1, 'rgba(248,113,113,0.10)');
+  ctx.beginPath();
+  ctx.moveTo(xOf(0), baseY);
+  history.forEach((v, i) => ctx.lineTo(xOf(i), yOf(v)));
+  ctx.lineTo(xOf(history.length - 1), baseY);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  // Main line — color by final vs start
+  const lineColor = history[history.length - 1] >= baseline ? '#4ade80' : '#f87171';
+  ctx.beginPath();
+  history.forEach((v, i) => i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v)));
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Dot on latest point
+  const lx = xOf(history.length - 1), ly = yOf(history[history.length - 1]);
+  ctx.beginPath();
+  ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+  ctx.fillStyle = lineColor;
+  ctx.fill();
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+async function fetchAIRecommendation() {
+  if (!G.apiKey || !G.model || G.phase !== 'player') return;
+
+  G.aiRec      = null;
+  G.aiLoading  = true;
+  $('ai-rec-value').textContent = '--';
+  $('ai-rec-value').className   = 'ai-rec-value empty';
+  $('btn-execute').disabled     = true;
+  $('ai-body').innerHTML        = '<div class="ai-thinking"><div class="spin"></div><span>Consulting AI agent…</span></div>';
+
+  const available   = getAvailableActions();
+  const playerScore = calcScore(G.playerHand);
+  const playerCards = handStr(G.playerHand);
+  const dealerUp    = cardStr(G.dealerHand[1]);
+
+  const reasoningGuide = {
+    'basic':
+      'Keep "reasoning" to one concise sentence.',
+    'statistical':
+      'In "reasoning", include estimated win probabilities for the recommended action vs alternatives, and the expected value impact.',
+    'in-depth':
+      'In "reasoning", provide a comprehensive breakdown: basic strategy rationale, how the dealer up-card affects the decision, relevant deck composition considerations, and any edge cases.',
+  }[G.explainLevel] || '';
+
+  const systemPrompt =
+    `You are a Blackjack strategy advisor. Analyze the game state and respond ONLY with a valid JSON object — no markdown, no code fences, no extra text.\n\nFormat: {"action":"<action>","reasoning":"<explanation>"}\n\nAvailable actions: ${available.join(', ')}\n\n${reasoningGuide}`;
+
+  const userPrompt =
+    `My hand: ${playerCards} (score: ${playerScore})\nDealer up-card: ${dealerUp}\nAvailable actions: ${available.join(', ')}\nBalance: $${G.balance}, Bet: $${G.bet}\n\nWhat should I do? Return only the JSON object.`;
+
+  const reqBody = {
+    model:           G.model,
+    max_tokens:      256,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   },
+    ],
+  };
+
+  console.log('[BJ AI] Request:', JSON.stringify({ playerCards, playerScore, dealerUp, available, balance: G.balance, bet: G.bet }));
+
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${G.apiKey}`,
+      },
+      body: JSON.stringify(reqBody),
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || `HTTP ${resp.status}`);
+
+    const rawText = data.choices[0].message.content;
+    console.log('[BJ AI] Raw response:', rawText);
+
+    const cleaned = rawText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    const parsed  = JSON.parse(cleaned);
+    const action  = (parsed.action || '').toLowerCase().trim();
+
+    if (!available.includes(action)) throw new Error(`Invalid action "${action}". Available: ${available.join(', ')}`);
+
+    G.aiRec = { action, reasoning: parsed.reasoning || '' };
+    if (G.roundAiRec === null) G.roundAiRec = action; // capture first recommendation
+    console.log('[BJ AI] Parsed action:', action);
+
+    $('ai-rec-value').textContent = action.toUpperCase();
+    $('ai-rec-value').className   = 'ai-rec-value';
+    $('ai-body').innerHTML        = `<div class="ai-reasoning">${escHtml(G.aiRec.reasoning)}</div>`;
+
+    if (G.phase === 'player') $('btn-execute').disabled = false;
+
+  } catch (err) {
+    console.error('[BJ AI] Error:', err);
+    $('ai-body').innerHTML = `<div class="ai-error">AI error: ${escHtml(err.message)}</div>`;
+    G.aiRec = null;
+  } finally {
+    G.aiLoading = false;
+  }
+}
+
+function getAvailableActions() {
+  const a = ['hit', 'stand'];
+  const firstTwo = G.playerHand.length === 2 && !G.doubled;
+  if (firstTwo && G.bet * 2 <= G.balance) a.push('double');
+  if (firstTwo && cardValue(G.playerHand[0].rank) === cardValue(G.playerHand[1].rank) && G.bet * 2 <= G.balance) a.push('split');
+  if (G.dealerHand[1]?.rank === 'A' && !G.insuranceTaken) a.push('insurance');
+  return a;
+}
+
+function executeRecommendation() {
+  if (!G.aiRec || G.phase !== 'player') return;
+  const action    = G.aiRec.action;
+  const available = getAvailableActions();
+
+  if (!available.includes(action)) {
+    setStatus(`Cannot execute "${action}" — action not available.`, '');
+    return;
+  }
+
+  // Mark as "followed AI" — overwrite if a manual action was already recorded
+  G.roundPlayerAction = action;
+  console.log('[BJ] Executing recommendation:', action);
+  ({ hit: playerHit, stand: playerStand, double: playerDouble, split: playerSplit, insurance: playerInsurance })[action]?.();
+}
+
+// ── Models ────────────────────────────────────────────────────────────────────
+async function fetchModels() {
+  if (!G.apiKey) return;
+  $('btn-refresh').disabled    = true;
+  $('btn-refresh').textContent = 'Loading…';
+
+  try {
+    const resp = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${G.apiKey}`,
+      },
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || `HTTP ${resp.status}`);
+
+    // Only keep GPT-4 and GPT-3.5 Turbo families — they reliably support
+    // response_format: json_object. GPT-5 and o1/o3/o4 reasoning models
+    // do not support json_object mode and break the AI recommendation loop.
+    const CHAT_PREFIXES  = ['gpt-4', 'gpt-3.5-turbo'];
+    const EXCLUDE_SUBSTR = ['transcribe','tts','audio','realtime','embedding','search',
+                            'similarity','instruct','diarize','whisper','dall-e',
+                            'babbage','davinci','curie','ada','vision-preview'];
+    const models = (data.data || [])
+      .filter(m =>
+        CHAT_PREFIXES.some(p => m.id.startsWith(p)) &&
+        !EXCLUDE_SUBSTR.some(x => m.id.includes(x))
+      )
+      .map(m => ({ id: m.id, displayName: m.id, family: getModelFamily(m.id) }))
+      .sort((a, b) => b.id.localeCompare(a.id));
+    console.log('[BJ] Fetched models:', models.map(m => m.id));
+
+    G.familyMap = {};
+    for (const m of models) {
+      if (!G.familyMap[m.family]) G.familyMap[m.family] = [];
+      G.familyMap[m.family].push(m);
+    }
+
+    populateFamilyDropdown();
+
+  } catch (err) {
+    console.error('[BJ] Model fetch error:', err);
+    setStatus(`Failed to load models: ${err.message}`, '');
+  } finally {
+    $('btn-refresh').disabled    = false;
+    $('btn-refresh').textContent = 'Refresh Models';
+  }
+}
+
+function getModelFamily(id) {
+  if (/^gpt-4o/.test(id)) return 'GPT-4o';
+  if (/^gpt-4/.test(id))  return 'GPT-4';
+  if (/^gpt-3/.test(id))  return 'GPT-3.5';
+  return 'Other';
+}
+
+function populateFamilyDropdown() {
+  const sel = $('family-sel');
+  sel.innerHTML = '';
+  const ORDER = ['GPT-4o','GPT-4','GPT-3.5','Other'];
+  const families = Object.keys(G.familyMap).sort((a, b) => {
+    const ia = ORDER.indexOf(a), ib = ORDER.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  for (const f of families) {
+    const o = document.createElement('option');
+    o.value = o.textContent = f;
+    sel.appendChild(o);
+  }
+  sel.disabled = families.length === 0;
+  if (families.length > 0) {
+    G.modelFamily = families[0];
+    sel.value = G.modelFamily;
+    populateModelDropdown();
+  }
+}
+
+function populateModelDropdown() {
+  const sel    = $('model-sel');
+  sel.innerHTML = '';
+  const models = G.familyMap[G.modelFamily] || [];
+  for (const m of models) {
+    const o = document.createElement('option');
+    o.value = m.id;
+    o.textContent = m.displayName || m.id;
+    sel.appendChild(o);
+  }
+  sel.disabled = models.length === 0;
+  if (models.length > 0) {
+    G.model    = models[0].id;
+    sel.value  = G.model;
+    updateActionButtons();
+  }
+}
+
+// ── .env parser ───────────────────────────────────────────────────────────────
+function parseEnvKey(text) {
+  // Strip UTF-8 BOM if present
+  const content = text.replace(/^\uFEFF/, '');
+  for (const raw of content.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    // Match: KEY=value  /  KEY="value"  /  KEY='value'
+    // Backreference \1 ensures opening and closing quotes match.
+    // Strips inline comments (# ...) that come after an unquoted value.
+    const m = line.match(/^OPENAI_API_KEY\s*=\s*(["'])(.*?)\1\s*(?:#.*)?$/i)
+           || line.match(/^OPENAI_API_KEY\s*=\s*([^\s"'#][^\s#]*?)\s*(?:#.*)?$/i);
+
+    if (m) {
+      // First pattern: m[2] is the value inside quotes
+      // Second pattern: m[1] is the bare value
+      const val = (m[2] !== undefined ? m[2] : m[1]).trim();
+      if (val) return val;
+    }
+  }
+  return null;
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function cardStr(c)  { return c ? `${c.rank}${c.suit}` : '?'; }
+function handStr(h)  { return h.map(c => c.hidden ? '[hidden]' : cardStr(c)).join(', '); }
+
+// ── Events ────────────────────────────────────────────────────────────────────
+function bindEvents() {
+  $('env-file').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const key = parseEnvKey(ev.target.result);
+      if (key) {
+        G.apiKey = key;
+        const prefix = key.substring(0, 14);
+        $('env-status').textContent = `Key loaded ✓ (${prefix}…)`;
+        $('env-status').className   = 'env-status loaded';
+        $('btn-refresh').disabled   = false;
+        setStatus('API key loaded. Click "Refresh Models" to continue.', '');
+        console.log('[BJ] API key loaded. Prefix:', prefix + '...');
+      } else {
+        G.apiKey = null;
+        $('env-status').textContent = 'Key not found';
+        $('env-status').className   = 'env-status';
+        setStatus('OPENAI_API_KEY not found in uploaded file.', '');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  $('btn-refresh').addEventListener('click',  fetchModels);
+  $('btn-play').addEventListener('click',     startRound);
+  $('btn-hit').addEventListener('click',      playerHit);
+  $('btn-stand').addEventListener('click',    playerStand);
+  $('btn-double').addEventListener('click',   playerDouble);
+  $('btn-split').addEventListener('click',    playerSplit);
+  $('btn-insurance').addEventListener('click',playerInsurance);
+  $('btn-execute').addEventListener('click',  executeRecommendation);
+  $('btn-analytics').addEventListener('click', openAnalytics);
+
+  // Explainability chips
+  document.querySelectorAll('.explain-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.explain-chip').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      G.explainLevel = btn.dataset.level;
+      console.log('[BJ] Explain level:', G.explainLevel);
+    });
+  });
+
+  $('family-sel').addEventListener('change', () => {
+    G.modelFamily = $('family-sel').value;
+    populateModelDropdown();
+  });
+
+  $('model-sel').addEventListener('change', () => {
+    G.model = $('model-sel').value;
+    updateActionButtons();
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  bindEvents();
+  renderAll();
+  updateActionButtons();
+  updateStats();
+}
+
+init();
+</script>
+</body>
+</html>
